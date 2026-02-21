@@ -72,11 +72,15 @@
                 <div class="grid-sekcja" style="color: #8e24aa; border-bottom-color: rgba(142, 36, 170, 0.3);">👑 Strefa Premium</div>
                 <div class="kafelek kafelek-szeroki" id="kafelekAsystent" style="grid-column: span 2; background: linear-gradient(135deg, #a18cd1, #fbc2eb); border: none;">
                     <div class="ikona-wrapper" style="background: rgba(255,255,255,0.3); color: white; margin-bottom: 0; margin-right: 15px;">🤖</div>
-                    <span style="font-size: 16px; color: white; font-weight: 800;">Asystent D@niel</span>
+                    <span style="font-size: 16px; color: white; font-weight: 800;" id="napisAsystentPulpit">Asystent D@niel (Darmowy)</span>
+                </div>
+                <div class="kafelek kafelek-szeroki" id="kafelekBackup" style="grid-column: span 2;">
+                    <div class="ikona-wrapper" style="background: #ecfdf5; color: #10b981; margin-bottom: 0; margin-right: 15px;">💾</div>
+                    <span style="font-size: 15px;">Kopia i Eksport (Premium)</span>
                 </div>
                 <div class="kafelek kafelek-szeroki" id="kafelekSejf" style="grid-column: span 2;">
                     <div class="ikona-wrapper" style="background: #eceff1; color: #455a64; margin-bottom: 0; margin-right: 15px;">🗂️</div>
-                    <span style="font-size: 15px;">Sejf Dokumentów (PIN)</span>
+                    <span style="font-size: 15px;" id="napisSejfPulpit">Sejf Dokumentów (PIN)</span>
                 </div>
 
                 <div class="grid-sekcja" style="color: #059669; border-bottom-color: rgba(5, 150, 105, 0.3);">🚀 Tryb Zabawy</div>
@@ -93,13 +97,15 @@
                 </div>
             </div>
 
-            <footer class="nota-prawna">
+            <footer class="nota-prawna" style="margin-bottom: 30px;">
                 <strong>© 2026 Rodzicownik | Autor: Daniel Ćw.<br>Wszelkie prawa zastrzeżone.</strong>
                 <p style="text-align: justify; margin-top: 10px; line-height: 1.5; font-size: 10px; color: #64748b;">
                     Aplikacja ma charakter wyłącznie pomocniczy i edukacyjny.<br><br>
-                    <strong>1. Wyłączenie odpowiedzialności medycznej:</strong> Moduł Apteczki, kalkulator dawek leków oraz informacje generowane przez Asystenta D@niela w żadnym wypadku nie zastępują profesjonalnej porady lekarskiej, diagnozy, ani opinii farmaceuty. Podane dawki są wyłącznie orientacyjne. Zawsze sprawdzaj dawkowanie na ulotce leku lub konsultuj się z pediatrą.<br><br>
-                    <strong>2. Bezpieczeństwo Danych:</strong> Wszelkie dane wprowadzane w aplikacji są zapisywane <strong>wyłącznie lokalnie</strong> w pamięci Twojego urządzenia. Aplikacja nie udostępnia Twoich danych.
+                    <strong>1. Wyłączenie odp. medycznej:</strong> Moduł Apteczki, kalkulator dawek leków oraz asystent AI nie zastępują porady lekarskiej. Dawki są orientacyjne. Konsultuj się z pediatrą.<br><br>
+                    <strong>2. Bezpieczeństwo Danych:</strong> Dane są zapisywane <strong>wyłącznie lokalnie</strong> na Twoim urządzeniu. Aplikacja nie wysyła ich do sieci.<br><br>
+                    <strong>3. Instalacja Aplikacji:</strong> Najlepiej korzystać z głównej przeglądarki systemu (Chrome/Safari). Aby zyskać pełną funkcjonalność (brak paska przeglądarki), dodaj aplikację do ekranu głównego.
                 </p>
+                <button id="btnInstallPWA" class="btn-akcja" style="background: #3b82f6; padding: 12px; font-size: 13px; margin-top: 10px; display: none; width: 100%;">📱 Zainstaluj aplikację na telefonie</button>
             </footer>
         </main>
 
@@ -204,7 +210,7 @@
                     <div class="premium-banner-ikona">🌟</div>
                     <div class="premium-banner-tekst">
                         <strong>Odblokuj Super Kalendarz!</strong>
-                        <span>Kategorie, priorytety i zaawansowane opcje</span>
+                        <span>Kolory, powtarzanie, przypisywanie osób</span>
                     </div>
                     <div class="premium-banner-strzalka">➤</div>
                 </div>
@@ -235,6 +241,37 @@
                             <input type="time" id="noweWydarzenieCzasPremium" style="flex: 1;">
                         </div>
                         
+                        <div style="display: flex; gap: 10px; margin-top: 10px;">
+                            <select id="noweWydarzenieCykl" style="flex: 1; font-size: 13px;">
+                                <option value="">Powtarzanie: Brak</option>
+                                <option value="🔄 Codziennie">🔄 Codziennie</option>
+                                <option value="🔄 Co tydzień">🔄 Co tydzień</option>
+                                <option value="🔄 Co miesiąc">🔄 Co miesiąc</option>
+                            </select>
+                            <select id="noweWydarzeniePrzypomnienie" style="flex: 1; font-size: 13px;">
+                                <option value="">Alarm: Brak</option>
+                                <option value="🔔 15 min przed">🔔 15 min przed</option>
+                                <option value="🔔 1h przed">🔔 1h przed</option>
+                                <option value="🔔 1 dzień przed">🔔 1 dzień przed</option>
+                            </select>
+                        </div>
+
+                        <div style="display: flex; gap: 10px; margin-top: 10px;">
+                            <select id="noweWydarzenieOsoba" style="flex: 1; font-size: 13px;">
+                                <option value="👨‍👩‍👧 Cała rodzina">👨‍👩‍👧 Cała rodzina</option>
+                                <option value="👩 Mama">👩 Mama</option>
+                                <option value="👨 Tata">👨 Tata</option>
+                                <option value="🧒 Dziecko">🧒 Dziecko</option>
+                            </select>
+                            <select id="noweWydarzenieKolor" style="flex: 1; font-size: 13px; font-weight: bold;">
+                                <option value="#3b82f6" style="color:#3b82f6;">🔵 Niebieski</option>
+                                <option value="#ef4444" style="color:#ef4444;">🔴 Czerwony</option>
+                                <option value="#10b981" style="color:#10b981;">🟢 Zielony</option>
+                                <option value="#8b5cf6" style="color:#8b5cf6;">🟣 Fioletowy</option>
+                                <option value="#f59e0b" style="color:#f59e0b;">🟠 Pomarańcz</option>
+                            </select>
+                        </div>
+
                         <textarea id="noweWydarzenieOpis" placeholder="Dodatkowe notatki / przypomnienia..." rows="2" style="margin-top: 10px; background-color: #f8fafc; border-radius: 12px;"></textarea>
 
                         <button id="btnDodajWydarzeniePremium" class="btn-premium" style="margin-top: 15px;">➕ Zaplanuj wydarzenie</button>
@@ -407,13 +444,28 @@
                 <input type="password" id="inputNowyPin" placeholder="Wymyśl nowy PIN" style="text-align: center; letter-spacing: 5px; font-weight: bold; font-size: 20px;">
                 <button id="btnZapiszPin" class="btn-danger" style="margin-top: 15px;">💾 Zmień PIN</button>
             </div>
+            <br><br>
+        </main>
+
+        <main id="ekranBackup" class="ekran ukryty no-print">
+            <button id="btnWrocBackup" class="btn-wroc"><span class="wroc-ikona">🔙</span> Wróć</button>
+            <div class="powitanie"><h2>Kopia i Eksport 💾</h2></div>
             
-            <div class="card" style="margin-top: 15px; border-left: 5px solid #8b5cf6; background-color: #f5f3ff;">
-                <h3 style="color: #8b5cf6;">🖨️ Eksport Danych (Premium)</h3>
-                <p style="font-size: 13px; color: #666; margin-top: 0; margin-bottom: 15px;">Pobierz całą bazę aktywnego dziecka do pliku PDF.</p>
+            <div class="card" style="border-left: 5px solid #8b5cf6; background-color: #f5f3ff;">
+                <h3 style="color: #8b5cf6;">🖨️ Eksport Danych (PDF)</h3>
+                <p style="font-size: 13px; color: #666; margin-top: 0; margin-bottom: 15px;">Pobierz czytelny raport tekstowy całej bazy aktywnego dziecka (np. na wizytę u lekarza).</p>
                 <button id="btnEksportPDF" class="btn-premium">Generuj Raport PDF</button>
             </div>
-            <br><br>
+            
+            <div class="card" style="margin-top: 15px; border-left: 5px solid #10b981; background-color: #ecfdf5;">
+                <h3 style="color: #10b981;">💾 Kopia Zapasowa (.json)</h3>
+                <p style="font-size: 13px; color: #666; margin-top: 0; margin-bottom: 15px;">Zabezpiecz systemowe dane aplikacji do pliku i przywracaj je w razie zmiany telefonu!</p>
+                <div style="display: flex; gap: 10px;">
+                    <button id="btnExportZapas" class="btn-akcja" style="flex: 1; background-color: #10b981; font-size: 13px; padding: 12px;">Pobierz kopię</button>
+                    <label for="inputImportZapas" class="btn-akcja" style="flex: 1; background-color: #f59e0b; font-size: 13px; padding: 12px; text-align: center; cursor: pointer; margin: 0;">Wczytaj kopię</label>
+                    <input type="file" id="inputImportZapas" accept=".json" style="display: none;">
+                </div>
+            </div>
         </main>
 
         <main id="ekranPremium" class="ekran ukryty no-print" style="background-color: #f8fafc; min-height: 100vh;">
@@ -431,7 +483,7 @@
                     <li><span class="check">✔️</span> Planer, Apteczka, Karmienie</li>
                     <li class="limited"><span class="cross">❌</span> Reklamy w aplikacji</li>
                     <li class="limited"><span class="cross">❌</span> Profile Dzieci: Tylko 1</li>
-                    <li class="limited"><span class="cross">❌</span> Asystent D@niel (Tylko czat)</li>
+                    <li class="limited"><span class="cross">❌</span> Kopia zapasowa (.json)</li>
                 </ul>
                 <button class="btn-pricing btn-pricing-outline">Twój obecny plan</button>
             </div>
@@ -439,15 +491,17 @@
             <div class="pricing-card pricing-card-premium">
                 <div class="bestseller-badge">BESTSELLER</div>
                 <h3 style="color: #fbbf24;">Premium</h3>
-                <div class="price" style="color: white;">19 zł <span class="price-sub" style="color: #94a3b8;">/ na zawsze</span></div>
+                <div class="price" style="color: white;">20 zł <span class="price-sub" style="color: #94a3b8;">/ na zawsze</span></div>
                 <ul class="pricing-list" style="color: #e2e8f0;">
                     <li><span class="check">✔️</span> <strong>Pełny Asystent D@niel</strong></li>
                     <li><span class="check">✔️</span> <strong>Nielimitowane profile dzieci</strong></li>
                     <li><span class="check">✔️</span> <strong>Sejf na dokumenty (Skaner)</strong></li>
-                    <li><span class="check">✔️</span> <strong>Eksport bazy do PDF</strong></li>
+                    <li><span class="check">✔️</span> <strong>Kopia zapasowa (Export JSON)</strong></li>
                     <li><span class="check">✔️</span> <strong>Całkowity brak reklam!</strong></li>
                 </ul>
+                <button class="btn-pricing btn-pricing-outline" id="btnTrialPremium" style="margin-bottom: 10px; border-color: #10b981; color: #10b981;">Wypróbuj za darmo przez 3 dni</button>
                 <button class="btn-pricing btn-pricing-gradient" id="btnKupPremium">Kup Pełną Wersję</button>
+                <p style="font-size: 11px; color: #64748b; margin-top: 15px; font-style: italic; text-align: center;">* Opłata Premium to czasowa opcja manualnego zakupu (dostęp na zawsze), mająca na celu wsparcie niezależnego rozwoju aplikacji.</p>
             </div>
             <br><br>
         </main>
@@ -459,9 +513,10 @@
                 <h2 style="font-size: 22px; color: #1e293b; margin-top: 0;">Odblokuj Premium</h2>
                 <div style="background: white; padding: 20px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); margin: 0 0 20px 0; border: 2px dashed #cbd5e1; text-align: left;">
                     <p style="margin-top: 0; font-weight: bold; color: #1e293b;">Krok 1: Wyślij przelew BLIK</p>
-                    <p style="font-size: 14px; color: #64748b; margin-bottom: 15px;">Wyślij <strong>19 PLN</strong> na poniższy numer telefonu. <strong>W tytule przelewu wpisz swój własny numer telefonu!</strong></p>
+                    <p style="font-size: 14px; color: #64748b; margin-bottom: 15px;">Wyślij <strong>20 PLN</strong> na poniższy numer telefonu. <strong>W tytule przelewu wpisz swój własny numer telefonu!</strong></p>
                     <span style="font-size: 32px; font-weight: 900; color: #e11d48; letter-spacing: 2px; display: block; text-align: center;">577 610 376</span>
                     <span style="display: block; font-size: 14px; color: #475569; margin-top: 10px; text-align: center;">Odbiorca: Daniel Ćw.</span>
+                    <p style="font-size: 11px; color: #64748b; margin-top: 15px; font-style: italic; text-align: center;">* Jest to czasowa opcja manualnego zakupu (dostęp na zawsze), mająca na celu wsparcie niezależnego rozwoju aplikacji.</p>
                 </div>
                 <div style="background: white; padding: 20px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); margin: 0 0 30px 0; border: 2px solid #8b5cf6; text-align: left;">
                     <p style="margin-top: 0; font-weight: bold; color: #8b5cf6;">Krok 2: Kod Aktywacyjny</p>
@@ -479,18 +534,17 @@
             <button id="navProfil" class="nav-btn"><div class="nav-icon">👤</div><span>Profil</span></button>
         </nav>
     </div>
+    
     <script src="script.js"></script>
-    <script src="script.js"></script>
+    
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('sw.js')
-                .then(reg => console.log('Service Worker zarejestrowany!', reg))
-                .catch(err => console.log('Błąd rejestracji Service Workera', err));
+                .then(reg => console.log('Service Worker pomyślnie zarejestrowany!', reg))
+                .catch(err => console.log('Błąd rejestracji Service Workera:', err));
             });
         }
     </script>
-</body>
-</html>
 </body>
 </html>

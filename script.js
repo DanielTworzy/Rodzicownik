@@ -1,7 +1,7 @@
 document.addEventListener("DOMContentLoaded", function() {
     
     // ==========================================
-    // 0. BAZY DANYCH I SYSTEM PREMIUM (MULTI-PROFIL)
+    // 0. BAZY DANYCH I SYSTEM PREMIUM + TRIAL
     // ==========================================
     const PULA_KODOW_PREMIUM = [
         "RDZ-A1B2", "RDZ-C3D4", "RDZ-E5F6", "RDZ-G7H8", "RDZ-I9J0", "RDZ-K1L2", "RDZ-M3N4", "RDZ-O5P6", "RDZ-Q7R8", "RDZ-S9T0",
@@ -16,38 +16,57 @@ document.addEventListener("DOMContentLoaded", function() {
         "RDZ-X0Z2", "RDZ-A3C5", "RDZ-B4D6", "RDZ-E7G9", "RDZ-F8H0", "RDZ-I1K3", "RDZ-J2L4", "RDZ-M5O7", "RDZ-N6P8", "RDZ-Q9S1"
     ];
 
-    let czyPremium = localStorage.getItem("rodzicownikPremium") === "true";
+    let czyPremiumPelne = localStorage.getItem("rodzicownikPremium") === "true";
+    let koniecTrialu = parseInt(localStorage.getItem("premiumTrialEnd")) || 0;
+    let czyTrial = false;
+    let pozostaloTrialText = "";
 
-    // MIGRACJA I MULTI-PROFIL
-    let bazaProfili = JSON.parse(localStorage.getItem("medBazaProfili")) || [{ id: Date.now(), imie: "Olaf", waga: "", alergie: "" }];
-    let aktywnyProfilId = localStorage.getItem("medAktywnyProfilId") || bazaProfili[0].id;
-
-    // Przeniesienie danych starych graczy
-    const staryZapProf = JSON.parse(localStorage.getItem("medProfil"));
-    if (staryZapProf && bazaProfili.length === 1 && bazaProfili[0].imie === "Olaf" && !bazaProfili[0].waga) {
-        bazaProfili[0].imie = staryZapProf.imie || "Olaf";
-        bazaProfili[0].waga = staryZapProf.waga || "";
-        bazaProfili[0].alergie = staryZapProf.alergie || "";
-        localStorage.setItem("medBazaProfili", JSON.stringify(bazaProfili));
+    if (!czyPremiumPelne && koniecTrialu > Date.now()) {
+        czyTrial = true;
+        let resztaGodzin = Math.floor((koniecTrialu - Date.now()) / (1000 * 60 * 60));
+        let dni = Math.floor(resztaGodzin / 24);
+        let godz = resztaGodzin % 24;
+        pozostaloTrialText = `${dni} dni i ${godz} godz.`;
+    } else if (!czyPremiumPelne && koniecTrialu > 0 && koniecTrialu <= Date.now()) {
+        localStorage.removeItem("premiumTrialEnd");
+        koniecTrialu = 0;
     }
+    
+    let czyPremium = czyPremiumPelne || czyTrial;
+
+    let bazaProfili = JSON.parse(localStorage.getItem("medBazaProfili")) || [{ id: Date.now(), imie: "", waga: "", alergie: "" }];
+    let aktywnyProfilId = localStorage.getItem("medAktywnyProfilId") || bazaProfili[0].id;
 
     function odswiezWidokPulpitu() {
         const baner = document.getElementById("banerPremiumPulpit"); 
         const reklamy = document.querySelectorAll(".ad-banner");
+        const napisAsystent = document.getElementById("napisAsystentPulpit");
+        const napisSejf = document.getElementById("napisSejfPulpit");
         
-        if (czyPremium) {
+        if (czyPremiumPelne) {
             if(baner) baner.style.display = "none";
-            const kSejf = document.querySelector("#kafelekSejf span"); if(kSejf) kSejf.innerText = "Sejf Dokumentów";
-            const kAsystent = document.querySelector("#kafelekAsystent span"); if(kAsystent) kAsystent.innerText = "D@niel (Premium)";
+            if(napisSejf) napisSejf.innerText = "Sejf Dokumentów";
+            if(napisAsystent) napisAsystent.innerText = "Asystent D@niel (Premium)";
             reklamy.forEach(r => r.style.display = "none");
-            
+            if(document.getElementById("kalendarzDarmowy")) document.getElementById("kalendarzDarmowy").classList.add("ukryty");
+            if(document.getElementById("kalendarzPremium")) document.getElementById("kalendarzPremium").classList.remove("ukryty");
+        } else if (czyTrial) {
+            if(baner) {
+                baner.style.display = "flex";
+                baner.innerHTML = `<div class="premium-banner-ikona">⏳</div><div class="premium-banner-tekst"><strong style="color:#10b981;">Wersja Próbna Premium</strong><span>Pozostało: ${pozostaloTrialText}</span></div><div class="premium-banner-strzalka">➤</div>`;
+            }
+            if(napisSejf) napisSejf.innerText = "Sejf Dokumentów";
+            if(napisAsystent) napisAsystent.innerText = "D@niel (Próbne Premium)";
+            reklamy.forEach(r => r.style.display = "none");
             if(document.getElementById("kalendarzDarmowy")) document.getElementById("kalendarzDarmowy").classList.add("ukryty");
             if(document.getElementById("kalendarzPremium")) document.getElementById("kalendarzPremium").classList.remove("ukryty");
         } else {
-            if(baner) baner.style.display = "flex";
-            const kAsystent = document.querySelector("#kafelekAsystent span"); if(kAsystent) kAsystent.innerText = "Asystent D@niel";
+            if(baner) {
+                baner.style.display = "flex";
+                baner.innerHTML = `<div class="premium-banner-ikona">👑</div><div class="premium-banner-tekst"><strong>Odblokuj wersję Premium!</strong><span>Więcej profili, Kopia zapasowa, Sejf</span></div><div class="premium-banner-strzalka">➤</div>`;
+            }
+            if(napisAsystent) napisAsystent.innerText = "Asystent D@niel (Wersja Darmowa)";
             reklamy.forEach(r => r.style.display = "flex");
-            
             if(document.getElementById("kalendarzDarmowy")) document.getElementById("kalendarzDarmowy").classList.remove("ukryty");
             if(document.getElementById("kalendarzPremium")) document.getElementById("kalendarzPremium").classList.add("ukryty");
         }
@@ -91,7 +110,7 @@ document.addEventListener("DOMContentLoaded", function() {
         document.getElementById("ekranPosilki"), document.getElementById("ekranSejf"), document.getElementById("ekranAsystent"), 
         document.getElementById("ekranPakowanie"), document.getElementById("ekranOsiagniecia"), 
         document.getElementById("ekranPremium"), document.getElementById("ekranBlik"), document.getElementById("ekranKarmienie"), 
-        document.getElementById("ekranBilans"), document.getElementById("ekranEkrany"), ekranDziecka 
+        document.getElementById("ekranBilans"), document.getElementById("ekranEkrany"), document.getElementById("ekranBackup"), ekranDziecka 
     ];
 
     function czyscPasekNawigacji() { btnNavStart.classList.remove("aktywny"); btnNavKalendarz.classList.remove("aktywny"); btnNavProfil.classList.remove("aktywny"); }
@@ -99,7 +118,6 @@ document.addEventListener("DOMContentLoaded", function() {
         wszystkieEkrany.forEach(e => { if(e) e.classList.add("ukryty"); }); 
         if(ekranDoPokazania) ekranDoPokazania.classList.remove("ukryty");
         document.getElementById("tytulAplikacji").innerText = tytul;
-        
         if (ekranDoPokazania === ekranDziecka || ekranDoPokazania === document.getElementById("ekranPremium") || ekranDoPokazania === document.getElementById("ekranBlik")) {
             pasekDolny.classList.add("ukryty"); 
         } else {
@@ -126,43 +144,51 @@ document.addEventListener("DOMContentLoaded", function() {
     document.getElementById("kafelekEkrany").addEventListener("click", () => pokazEkran(document.getElementById("ekranEkrany"), "Czas Ekranowy 💻"));
     
     document.getElementById("kafelekKarmienie").addEventListener("click", () => { 
-        const now = new Date();
-        document.getElementById("noweKarmienieData").value = now.toISOString().split('T')[0];
-        document.getElementById("noweKarmienieCzas").value = now.toTimeString().substring(0,5);
-        pokazEkran(document.getElementById("ekranKarmienie"), "Karmienie 🍼"); 
+        const now = new Date(); document.getElementById("noweKarmienieData").value = now.toISOString().split('T')[0]; document.getElementById("noweKarmienieCzas").value = now.toTimeString().substring(0,5); pokazEkran(document.getElementById("ekranKarmienie"), "Karmienie 🍼"); 
     });
     document.getElementById("kafelekBilans").addEventListener("click", () => { 
-        document.getElementById("nowyBilansData").value = new Date().toISOString().split('T')[0];
-        document.getElementById("noweSzczepienieData").value = new Date().toISOString().split('T')[0];
-        pokazEkran(document.getElementById("ekranBilans"), "Bilans 📈"); 
+        document.getElementById("nowyBilansData").value = new Date().toISOString().split('T')[0]; document.getElementById("noweSzczepienieData").value = new Date().toISOString().split('T')[0]; pokazEkran(document.getElementById("ekranBilans"), "Bilans 📈"); 
     });
 
     document.getElementById("kafelekAsystent").addEventListener("click", () => { pokazEkran(wszystkieEkrany[14], "Asystent D@niel 🤖"); wczytajAktywnyProfil(); renderujCzat(); });
     
     document.getElementById("kafelekSejf").addEventListener("click", () => { 
-        if(!czyPremium) {
-            pokazEkran(document.getElementById("ekranPremium"), "Konto Premium 👑"); 
-        } else {
+        if(!czyPremium) { pokazEkran(document.getElementById("ekranPremium"), "Konto Premium 👑"); } else {
             const p = aktualnyPin === "1234" ? " (Domyślny to: 1234)" : ""; 
             if(prompt(`Podaj PIN rodzica${p}:`) === aktualnyPin) { pokazEkran(wszystkieEkrany[13], "Sejf Dokumentów 🗂️"); renderujSejf(); } else { alert("Błędny PIN!"); } 
         }
     });
 
+    document.getElementById("kafelekBackup").addEventListener("click", () => {
+        if(!czyPremium) { pokazEkran(document.getElementById("ekranPremium"), "Konto Premium 👑"); } else {
+            pokazEkran(document.getElementById("ekranBackup"), "Kopia Zapasowa 💾");
+        }
+    });
+
     document.getElementById("kafelekTrybDziecka").addEventListener("click", () => { pokazEkran(ekranDziecka, "Tryb Dziecka 🚀"); renderujWidokDziecka(); });
     
-    // TWARDE LINKOWANIE PREMIUM
     const banerPremium = document.getElementById("banerPremiumPulpit");
     if(banerPremium) { banerPremium.addEventListener("click", () => { pokazEkran(document.getElementById("ekranPremium"), "Konto Premium 👑"); }); }
     
     const przyciskKup = document.getElementById("btnKupPremium");
     if(przyciskKup) { przyciskKup.addEventListener("click", () => { pokazEkran(document.getElementById("ekranBlik"), "Aktywacja Premium"); }); }
 
+    const przyciskTrial = document.getElementById("btnTrialPremium");
+    if(przyciskTrial) {
+        if(localStorage.getItem("premiumTrialEnd") || czyPremiumPelne) { przyciskTrial.style.display = "none"; }
+        przyciskTrial.addEventListener("click", () => {
+            if(localStorage.getItem("premiumTrialEnd")) return alert("Wykorzystałeś już swój darmowy okres próbny!");
+            localStorage.setItem("premiumTrialEnd", Date.now() + (3 * 24 * 60 * 60 * 1000));
+            alert("🎉 Gratulacje! Rozpocząłeś 3-dniowy okres próbny wersji Premium. Masz dostęp do wszystkich funkcji!"); location.reload();
+        });
+    }
+
     const przyciskAktywuj = document.getElementById("btnAktywujPremium");
     if(przyciskAktywuj) {
         przyciskAktywuj.addEventListener("click", () => {
             const wpisanyKod = document.getElementById("inputKodAktywacyjny").value.trim().toUpperCase();
             if (PULA_KODOW_PREMIUM.includes(wpisanyKod)) {
-                localStorage.setItem("rodzicownikPremium", "true"); czyPremium = true;
+                localStorage.setItem("rodzicownikPremium", "true"); czyPremium = true; czyPremiumPelne = true;
                 alert("✅ Gratulacje! Kod poprawny. Wersja Premium została odblokowana na zawsze!");
                 document.getElementById("inputKodAktywacyjny").value = ""; btnNavStart.click(); odswiezWidokPulpitu(); 
             } else if (wpisanyKod === "") { alert("Wpisz kod, który otrzymałeś w wiadomości SMS.");
@@ -170,41 +196,29 @@ document.addEventListener("DOMContentLoaded", function() {
         });
     }
 
-    const powroty = ["btnWrocZdrowie", "btnWrocObowiazki", "btnWrocFinanse", "btnWrocNotatki", "btnWrocKontakty", "btnWrocStoper", "btnWrocRozmiary", "btnWrocCytaty", "btnWrocPlan", "btnWrocPosilki", "btnWrocPakowanie", "btnWrocOsiagniecia", "btnWrocSejf", "btnWrocAsystent", "btnWrocPremium", "btnWrocBlik", "btnWrocKarmienie", "btnWrocBilans", "btnWrocEkrany"];
+    const powroty = ["btnWrocZdrowie", "btnWrocObowiazki", "btnWrocFinanse", "btnWrocNotatki", "btnWrocKontakty", "btnWrocStoper", "btnWrocRozmiary", "btnWrocCytaty", "btnWrocPlan", "btnWrocPosilki", "btnWrocPakowanie", "btnWrocOsiagniecia", "btnWrocSejf", "btnWrocAsystent", "btnWrocPremium", "btnWrocBlik", "btnWrocKarmienie", "btnWrocBilans", "btnWrocEkrany", "btnWrocBackup"];
     powroty.forEach(id => { if(document.getElementById(id)) { document.getElementById(id).addEventListener("click", () => btnNavStart.click()); } });
 
-    // Przejście z banera Premium wewnątrz Kalendarza
-    if(document.getElementById("banerKalendarzPremium")) {
-        document.getElementById("banerKalendarzPremium").addEventListener("click", () => {
-            btnNavStart.click(); 
-            if(document.getElementById("banerPremiumPulpit")) document.getElementById("banerPremiumPulpit").click();
-        });
-    }
-
+    if(document.getElementById("banerKalendarzPremium")) { document.getElementById("banerKalendarzPremium").addEventListener("click", () => { btnNavStart.click(); if(document.getElementById("banerPremiumPulpit")) document.getElementById("banerPremiumPulpit").click(); }); }
     odswiezWidokPulpitu();
 
-    // ==========================================
-    // 2. STOPER I EKSPORT PDF
-    // ==========================================
+    let deferredPrompt;
+    window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault(); deferredPrompt = e; const installBtn = document.getElementById('btnInstallPWA');
+        if(installBtn) { installBtn.style.display = 'inline-block'; installBtn.addEventListener('click', () => { installBtn.style.display = 'none'; deferredPrompt.prompt(); deferredPrompt.userChoice.then((choiceResult) => { deferredPrompt = null; }); }); }
+    });
+
     let stoperInterval; let czasSekundy = 0; const wyswietlacz = document.getElementById("wyswietlaczStopera");
     window.startStopera = function(sekundy) { 
-        clearInterval(stoperInterval); czasSekundy = sekundy; 
-        wyswietlacz.innerText = `${Math.floor(czasSekundy / 60).toString().padStart(2, '0')}:${(czasSekundy % 60).toString().padStart(2, '0')}`; 
+        clearInterval(stoperInterval); czasSekundy = sekundy; wyswietlacz.innerText = `${Math.floor(czasSekundy / 60).toString().padStart(2, '0')}:${(czasSekundy % 60).toString().padStart(2, '0')}`; 
         stoperInterval = setInterval(() => { 
             czasSekundy--; wyswietlacz.innerText = `${Math.floor(czasSekundy / 60).toString().padStart(2, '0')}:${(czasSekundy % 60).toString().padStart(2, '0')}`; 
             if (czasSekundy <= 0) { clearInterval(stoperInterval); alert("⏰ Czas minął!"); } 
         }, 1000); 
     }
-    // Szybkie guziki
     document.querySelectorAll('.btn-timer-szybki').forEach(btn => btn.addEventListener('click', (e) => window.startStopera(parseInt(e.target.dataset.czas))));
-    // Własne minuty
-    document.getElementById("btnStoperWlasny").addEventListener("click", () => {
-        const wlasneMinuty = parseFloat(document.getElementById("stoperWlasnyCzas").value);
-        if(wlasneMinuty > 0) { window.startStopera(wlasneMinuty * 60); document.getElementById("stoperWlasnyCzas").value = ""; }
-    });
-    // Stop
+    document.getElementById("btnStoperWlasny").addEventListener("click", () => { const wlasneMinuty = parseFloat(document.getElementById("stoperWlasnyCzas").value); if(wlasneMinuty > 0) { window.startStopera(wlasneMinuty * 60); document.getElementById("stoperWlasnyCzas").value = ""; } });
     document.getElementById("btnStoperStop").addEventListener("click", () => { clearInterval(stoperInterval); czasSekundy = 0; wyswietlacz.innerText = "00:00"; });
-
 
     document.getElementById("btnEksportPDF").addEventListener("click", () => {
         if(!czyPremium) { pokazEkran(document.getElementById("ekranPremium"), "Konto Premium 👑"); return; }
@@ -228,108 +242,79 @@ document.addEventListener("DOMContentLoaded", function() {
         setTimeout(() => { printWindow.print(); printWindow.close(); }, 500);
     });
 
-    // ==========================================
-    // PROFIL DZIECI (MULTI-CHILD) I PIN
-    // ==========================================
+    document.getElementById("btnExportZapas").addEventListener("click", () => {
+        if(!czyPremium) return alert("Funkcja Kopii Zapasowej jest dostępna tylko w wersji Premium!");
+        const dataToExport = JSON.stringify(localStorage);
+        const blob = new Blob([dataToExport], { type: "application/json" });
+        const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url;
+        a.download = `Rodzicownik_Kopia_${new Date().toISOString().split('T')[0]}.json`;
+        document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+    });
+
+    document.getElementById("inputImportZapas").addEventListener("change", (e) => {
+        if(!czyPremium) { e.target.value = ""; return alert("Funkcja Kopii Zapasowej jest dostępna tylko w wersji Premium!"); }
+        const file = e.target.files[0]; if(!file) return;
+        if(confirm("UWAGA! Wczytanie kopii zapasowej trwale nadpisze WSZYSTKIE obecne dane w aplikacji. Czy na pewno chcesz kontynuować?")) {
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                try {
+                    const importedData = JSON.parse(event.target.result);
+                    localStorage.clear();
+                    Object.keys(importedData).forEach(key => { localStorage.setItem(key, importedData[key]); });
+                    alert("✅ Kopia zapasowa została pomyślnie wczytana! Aplikacja zostanie zresetowana."); location.reload();
+                } catch (error) { alert("❌ Wystąpił błąd podczas wczytywania. Upewnij się, że wybierasz poprawny plik .json."); }
+            };
+            reader.readAsText(file);
+        } else { e.target.value = ""; }
+    });
+
     function renderujWybierakProfili() {
-        const sel = document.getElementById("wyborDziecka");
-        sel.innerHTML = "";
-        bazaProfili.forEach(p => {
-            const opt = document.createElement("option");
-            opt.value = p.id;
-            opt.innerText = p.imie || "Dziecko";
-            if (p.id == aktywnyProfilId) opt.selected = true;
-            sel.appendChild(opt);
-        });
+        const sel = document.getElementById("wyborDziecka"); sel.innerHTML = "";
+        bazaProfili.forEach(p => { const opt = document.createElement("option"); opt.value = p.id; opt.innerText = p.imie || "Dziecko"; if (p.id == aktywnyProfilId) opt.selected = true; sel.appendChild(opt); });
         wczytajAktywnyProfil();
     }
 
     function wczytajAktywnyProfil() {
         const p = bazaProfili.find(x => x.id == aktywnyProfilId) || bazaProfili[0];
-        document.getElementById("imieDziecka").value = p.imie;
-        document.getElementById("wagaDziecka").value = p.waga;
-        document.getElementById("alergieDziecka").value = p.alergie;
-        if(document.getElementById("mojPseudonimCzatu")) {
-            document.getElementById("mojPseudonimCzatu").innerText = `Rodzic ${p.imie || "Dziecka"}`;
-        }
+        document.getElementById("imieDziecka").value = p.imie; document.getElementById("wagaDziecka").value = p.waga; document.getElementById("alergieDziecka").value = p.alergie;
+        if(document.getElementById("mojPseudonimCzatu")) { document.getElementById("mojPseudonimCzatu").innerText = `Rodzic ${p.imie || "Dziecka"}`; }
         localStorage.setItem("medProfil", JSON.stringify({imie: p.imie, waga: p.waga, alergie: p.alergie}));
     }
 
-    document.getElementById("wyborDziecka").addEventListener("change", (e) => {
-        aktywnyProfilId = e.target.value;
-        localStorage.setItem("medAktywnyProfilId", aktywnyProfilId);
-        wczytajAktywnyProfil();
-    });
-
+    document.getElementById("wyborDziecka").addEventListener("change", (e) => { aktywnyProfilId = e.target.value; localStorage.setItem("medAktywnyProfilId", aktywnyProfilId); wczytajAktywnyProfil(); });
     document.getElementById("btnDodajDziecko").addEventListener("click", () => {
-        if(!czyPremium) {
-            if(confirm("Dodawanie kolejnych profili to funkcja Premium. Czy chcesz odblokować pełną wersję?")) { pokazEkran(document.getElementById("ekranPremium"), "Konto Premium 👑"); } return;
-        }
+        if(!czyPremium) { if(confirm("Dodawanie kolejnych profili to funkcja Premium. Czy chcesz ją odblokować?")) { pokazEkran(document.getElementById("ekranPremium"), "Konto Premium 👑"); } return; }
         const noweImie = prompt("Podaj imię kolejnego dziecka:");
         if (noweImie) {
-            const nowyProfil = { id: Date.now(), imie: noweImie, waga: "", alergie: "" };
-            bazaProfili.push(nowyProfil);
-            localStorage.setItem("medBazaProfili", JSON.stringify(bazaProfili));
-            aktywnyProfilId = nowyProfil.id;
-            localStorage.setItem("medAktywnyProfilId", aktywnyProfilId);
-            renderujWybierakProfili();
-            alert(`Dodano profil: ${noweImie}! Wpisz teraz jego wagę.`);
+            const nowyProfil = { id: Date.now(), imie: noweImie, waga: "", alergie: "" }; bazaProfili.push(nowyProfil); localStorage.setItem("medBazaProfili", JSON.stringify(bazaProfili));
+            aktywnyProfilId = nowyProfil.id; localStorage.setItem("medAktywnyProfilId", aktywnyProfilId); renderujWybierakProfili(); alert(`Dodano profil: ${noweImie}! Wpisz teraz jego wagę.`);
         }
     });
 
     document.getElementById("btnZapiszProfil").addEventListener("click", () => { 
-        let p = bazaProfili.find(x => x.id == aktywnyProfilId);
-        p.imie = document.getElementById("imieDziecka").value; 
-        p.waga = document.getElementById("wagaDziecka").value; 
-        p.alergie = document.getElementById("alergieDziecka").value; 
-        localStorage.setItem("medBazaProfili", JSON.stringify(bazaProfili)); 
-        renderujWybierakProfili(); 
-        alert("✅ Zapisano dane profilu!"); 
+        let p = bazaProfili.find(x => x.id == aktywnyProfilId); p.imie = document.getElementById("imieDziecka").value; p.waga = document.getElementById("wagaDziecka").value; p.alergie = document.getElementById("alergieDziecka").value; 
+        localStorage.setItem("medBazaProfili", JSON.stringify(bazaProfili)); renderujWybierakProfili(); alert("✅ Zapisano dane profilu!"); 
     });
 
     document.getElementById("btnZapiszPin").addEventListener("click", () => { 
-        const stary = document.getElementById("inputStaryPin").value;
-        const nowy = document.getElementById("inputNowyPin").value.trim(); 
+        const stary = document.getElementById("inputStaryPin").value; const nowy = document.getElementById("inputNowyPin").value.trim(); 
         if (stary !== aktualnyPin) { return alert("❌ Błędny obecny kod PIN!"); }
         if (nowy === "") { return alert("❌ Nowy PIN nie może być pusty!"); }
         aktualnyPin = nowy; localStorage.setItem("rodzicPin", aktualnyPin); 
-        document.getElementById("inputStaryPin").value = ""; document.getElementById("inputNowyPin").value = ""; 
-        alert("✅ PIN został pomyślnie zmieniony!"); 
+        document.getElementById("inputStaryPin").value = ""; document.getElementById("inputNowyPin").value = ""; alert("✅ PIN został pomyślnie zmieniony!"); 
     });
 
     document.getElementById("btnWyjscieDziecko").addEventListener("click", () => { const p = aktualnyPin === "1234" ? " (Domyślny: 1234)" : ""; if (prompt(`Podaj PIN rodzica${p}:`) === aktualnyPin) { btnNavStart.click(); } else { alert("Błędny PIN!"); } });
-    
     renderujWybierakProfili(); 
 
-
-    // ==========================================
-    // 3. WSZYSTKIE MODUŁY APLIKACJI
-    // ==========================================
-    
     function renderujKarmienie() { const lista = document.getElementById("listaKarmienie"); lista.innerHTML = ""; bazaKarmienie.forEach(k => { const li = document.createElement("li"); li.className = "notatka-element"; li.innerHTML = `<div class="notatka-tekst"><strong style="color:#ad1457;">${k.data} ${k.czas}</strong><br>${k.typ} ${k.ilosc ? `(${k.ilosc} ml)` : ''}</div><button class="btn-usun" style="margin-left: 10px;">🗑️</button>`; li.querySelector('.btn-usun').addEventListener('click', () => { bazaKarmienie = bazaKarmienie.filter(x => x.id !== k.id); localStorage.setItem("narzedziaKarmienie", JSON.stringify(bazaKarmienie)); renderujKarmienie(); }); lista.appendChild(li); }); }
     document.getElementById("btnDodajKarmienie").addEventListener("click", () => { const t = document.getElementById("noweKarmienieTyp").value; const i = document.getElementById("noweKarmienieIlosc").value; const d = document.getElementById("noweKarmienieData").value; const c = document.getElementById("noweKarmienieCzas").value; if(!d || !c) return; bazaKarmienie.unshift({ id: Date.now(), typ: t, ilosc: i, data: d, czas: c }); localStorage.setItem("narzedziaKarmienie", JSON.stringify(bazaKarmienie)); document.getElementById("noweKarmienieIlosc").value = ""; renderujKarmienie(); }); renderujKarmienie();
 
     function renderujBilans() { const lista = document.getElementById("listaBilans"); lista.innerHTML = ""; bazaBilans.forEach(b => { const li = document.createElement("li"); li.className = "notatka-element"; li.innerHTML = `<div class="notatka-tekst"><strong style="color:#283593;">${b.data}</strong><br>Waga: ${b.waga} kg | Wzrost: ${b.wzrost} cm | Głowa: ${b.glowa} cm</div><button class="btn-usun" style="margin-left: 10px;">🗑️</button>`; li.querySelector('.btn-usun').addEventListener('click', () => { bazaBilans = bazaBilans.filter(x => x.id !== b.id); localStorage.setItem("narzedziaBilans", JSON.stringify(bazaBilans)); renderujBilans(); }); lista.appendChild(li); }); }
-    document.getElementById("btnDodajBilans").addEventListener("click", () => { 
-        const d = document.getElementById("nowyBilansData").value; 
-        const w = document.getElementById("nowyBilansWaga").value; 
-        const wz = document.getElementById("nowyBilansWzrost").value; 
-        const g = document.getElementById("nowyBilansGlowa").value; 
-        if(!d) return; 
-        
-        bazaBilans.unshift({ id: Date.now(), data: d, waga: w||'-', wzrost: wz||'-', glowa: g||'-' }); 
-        localStorage.setItem("narzedziaBilans", JSON.stringify(bazaBilans)); 
-        
-        if(w) { 
-            let p = bazaProfili.find(x => x.id == aktywnyProfilId);
-            if(p) { p.waga = w; localStorage.setItem("medBazaProfili", JSON.stringify(bazaProfili)); renderujWybierakProfili(); }
-        }
-        document.getElementById("nowyBilansWaga").value = ""; document.getElementById("nowyBilansWzrost").value = ""; document.getElementById("nowyBilansGlowa").value = ""; renderujBilans(); 
-    }); renderujBilans();
+    document.getElementById("btnDodajBilans").addEventListener("click", () => { const d = document.getElementById("nowyBilansData").value; const w = document.getElementById("nowyBilansWaga").value; const wz = document.getElementById("nowyBilansWzrost").value; const g = document.getElementById("nowyBilansGlowa").value; if(!d) return; bazaBilans.unshift({ id: Date.now(), data: d, waga: w||'-', wzrost: wz||'-', glowa: g||'-' }); localStorage.setItem("narzedziaBilans", JSON.stringify(bazaBilans)); if(w) { let p = bazaProfili.find(x => x.id == aktywnyProfilId); if(p) { p.waga = w; localStorage.setItem("medBazaProfili", JSON.stringify(bazaProfili)); renderujWybierakProfili(); } } document.getElementById("nowyBilansWaga").value = ""; document.getElementById("nowyBilansWzrost").value = ""; document.getElementById("nowyBilansGlowa").value = ""; renderujBilans(); }); renderujBilans();
 
     function renderujSzczepienia() { const lista = document.getElementById("listaSzczepien"); lista.innerHTML = ""; bazaSzczepien.forEach(s => { const li = document.createElement("li"); li.className = "notatka-element"; li.innerHTML = `<div class="notatka-tekst"><strong style="color:#00acc1;">${s.data}</strong><br>${s.nazwa}</div><button class="btn-usun" style="margin-left: 10px;">🗑️</button>`; li.querySelector('.btn-usun').addEventListener('click', () => { bazaSzczepien = bazaSzczepien.filter(x => x.id !== s.id); localStorage.setItem("narzedziaSzczepienia", JSON.stringify(bazaSzczepien)); renderujSzczepienia(); }); lista.appendChild(li); }); }
     document.getElementById("btnDodajSzczepienie").addEventListener("click", () => { const d = document.getElementById("noweSzczepienieData").value; const n = document.getElementById("noweSzczepienieNazwa").value.trim(); if(!d || !n) return; bazaSzczepien.push({ id: Date.now(), data: d, nazwa: n }); bazaSzczepien.sort((a,b) => new Date(b.data) - new Date(a.data)); localStorage.setItem("narzedziaSzczepienia", JSON.stringify(bazaSzczepien)); document.getElementById("noweSzczepienieNazwa").value = ""; renderujSzczepienia(); }); renderujSzczepienia();
-
 
     const typLekuSelect = document.getElementById("typLeku"); const wartoscInput = document.getElementById("wartosc"); const panelNowegoLeku = document.getElementById("panelNowegoLeku"); const infoDawka = document.getElementById("infoDawka");
     function odswiezLeki() { typLekuSelect.innerHTML = `<option value="Ibuprofen">💊 Ibuprofen</option><option value="Paracetamol">💊 Paracetamol</option>`; mojaApteczka.forEach(l => { const o = document.createElement("option"); o.value = l; o.innerText = "💊 " + l; typLekuSelect.appendChild(o); }); typLekuSelect.innerHTML += `<option value="DodajNowy">➕ Dodaj nowy...</option><option value="Temperatura">🌡️ Temperatura</option>`; } odswiezLeki();
@@ -350,7 +335,6 @@ document.addEventListener("DOMContentLoaded", function() {
     function renderujNotatki() { const lista = document.getElementById("listaNotatek"); lista.innerHTML = ""; bazaNotatek.forEach(n => { const li = document.createElement("li"); li.className = "notatka-element"; li.innerHTML = `<div class="notatka-tekst">${n.tekst}</div><button class="btn-usun" style="margin-left: 10px; margin-top: -5px;">🗑️</button>`; li.querySelector('.btn-usun').addEventListener('click', () => { bazaNotatek = bazaNotatek.filter(x => x.id !== n.id); localStorage.setItem("narzedziaNotatki", JSON.stringify(bazaNotatek)); renderujNotatki(); }); lista.appendChild(li); }); }
     document.getElementById("btnDodajNotatke").addEventListener("click", () => { const t = document.getElementById("nowaNotatkaTekst").value.trim(); if (!t) return; bazaNotatek.unshift({ id: Date.now(), tekst: t }); localStorage.setItem("narzedziaNotatki", JSON.stringify(bazaNotatek)); document.getElementById("nowaNotatkaTekst").value = ""; renderujNotatki(); }); renderujNotatki();
 
-    // PODZIELONY KALENDARZ
     function renderujKalendarz() { 
         const lista = document.getElementById("listaWydarzen"); lista.innerHTML = ""; 
         bazaKalendarz.sort((a, b) => new Date(a.dataPełna) - new Date(b.dataPełna)); 
@@ -358,21 +342,19 @@ document.addEventListener("DOMContentLoaded", function() {
             const li = document.createElement("li"); li.className = "wydarzenie-element"; 
             const dataObj = new Date(wyd.dataPełna); const miesiace = ["STY", "LUT", "MAR", "KWI", "MAJ", "CZE", "LIP", "SIE", "WRZ", "PAŹ", "LIS", "GRU"]; 
             
+            li.style.borderLeft = `5px solid ${wyd.kolor || '#3b82f6'}`;
             let etykiety = "";
-            if(wyd.kategoria || wyd.priorytet) {
-                etykiety = `<div style="margin-top:5px; font-size:11px;"><span style="background:#e2e8f0; padding:2px 6px; border-radius:4px; margin-right:5px;">${wyd.kategoria || ''}</span><span style="font-weight:bold;">${wyd.priorytet || ''}</span></div>`;
+            if(wyd.kategoria || wyd.priorytet || wyd.cykl || wyd.przypomnienie || wyd.osoba) {
+                etykiety = `<div style="margin-top:5px; font-size:11px; display:flex; flex-wrap:wrap; gap:4px;">
+                    ${wyd.kategoria ? `<span style="background:#e2e8f0; padding:2px 6px; border-radius:4px;">${wyd.kategoria}</span>` : ''}
+                    ${wyd.priorytet ? `<span style="background:#fef3c7; color:#b45309; padding:2px 6px; border-radius:4px; font-weight:bold;">${wyd.priorytet}</span>` : ''}
+                    ${wyd.cykl ? `<span style="background:#dbeafe; color:#1e40af; padding:2px 6px; border-radius:4px;">${wyd.cykl}</span>` : ''}
+                    ${wyd.przypomnienie ? `<span style="background:#fee2e2; color:#b91c1c; padding:2px 6px; border-radius:4px;">${wyd.przypomnienie}</span>` : ''}
+                    ${wyd.osoba ? `<span style="background:#f3e8ff; color:#6b21a8; padding:2px 6px; border-radius:4px;">${wyd.osoba}</span>` : ''}
+                </div>`;
             }
 
-            li.innerHTML = `
-                <div class="wydarzenie-data"><small>${miesiace[dataObj.getMonth()]}</small><span>${dataObj.getDate().toString().padStart(2, '0')}</span></div>
-                <div class="wydarzenie-info">
-                    <span class="wydarzenie-tytul">${wyd.tytul}</span>
-                    <span class="wydarzenie-czas">🕒 ${wyd.czas || "Cały dzień"}</span>
-                    ${etykiety}
-                    ${wyd.opis ? `<div style="font-size:12px; color:#64748b; margin-top:3px; font-style:italic;">${wyd.opis}</div>` : ''}
-                </div>
-                <button class="btn-usun" style="font-size: 20px;">🗑️</button>
-            `; 
+            li.innerHTML = `<div class="wydarzenie-data"><small>${miesiace[dataObj.getMonth()]}</small><span>${dataObj.getDate().toString().padStart(2, '0')}</span></div><div class="wydarzenie-info"><span class="wydarzenie-tytul">${wyd.tytul}</span><span class="wydarzenie-czas">🕒 ${wyd.czas || "Cały dzień"}</span>${etykiety}${wyd.opis ? `<div style="font-size:12px; color:#64748b; margin-top:3px; font-style:italic;">${wyd.opis}</div>` : ''}</div><button class="btn-usun" style="font-size: 20px;">🗑️</button>`; 
             li.querySelector('.btn-usun').addEventListener('click', () => { bazaKalendarz = bazaKalendarz.filter(w => w.id !== wyd.id); localStorage.setItem("narzedziaKalendarz", JSON.stringify(bazaKalendarz)); renderujKalendarz(); }); 
             lista.appendChild(li); 
         }); 
@@ -384,18 +366,11 @@ document.addEventListener("DOMContentLoaded", function() {
         localStorage.setItem("narzedziaKalendarz", JSON.stringify(bazaKalendarz)); document.getElementById("noweWydarzenieTytul").value = ""; renderujKalendarz(); 
     }); 
     document.getElementById("btnDodajWydarzeniePremium").addEventListener("click", () => { 
-        const tytul = document.getElementById("noweWydarzenieTytulPremium").value.trim(); 
-        const kategoria = document.getElementById("noweWydarzenieKategoria").value;
-        const priorytet = document.getElementById("noweWydarzeniePriorytet").value;
-        const data = document.getElementById("noweWydarzenieDataPremium").value; 
-        const czas = document.getElementById("noweWydarzenieCzasPremium").value; 
-        const opis = document.getElementById("noweWydarzenieOpis").value.trim();
-
+        const tytul = document.getElementById("noweWydarzenieTytulPremium").value.trim(); const kategoria = document.getElementById("noweWydarzenieKategoria").value; const priorytet = document.getElementById("noweWydarzeniePriorytet").value; const data = document.getElementById("noweWydarzenieDataPremium").value; const czas = document.getElementById("noweWydarzenieCzasPremium").value; const opis = document.getElementById("noweWydarzenieOpis").value.trim();
+        const cykl = document.getElementById("noweWydarzenieCykl").value; const przypomnienie = document.getElementById("noweWydarzeniePrzypomnienie").value; const osoba = document.getElementById("noweWydarzenieOsoba").value; const kolor = document.getElementById("noweWydarzenieKolor").value;
         if (!tytul || !data) return alert("Podaj tytuł i datę wydarzenia!"); 
-        bazaKalendarz.push({ id: Date.now(), tytul, data, czas, dataPełna: czas ? `${data}T${czas}` : `${data}T00:00`, kategoria, priorytet, opis }); 
-        localStorage.setItem("narzedziaKalendarz", JSON.stringify(bazaKalendarz)); 
-        document.getElementById("noweWydarzenieTytulPremium").value = ""; document.getElementById("noweWydarzenieOpis").value = ""; 
-        renderujKalendarz(); 
+        bazaKalendarz.push({ id: Date.now(), tytul, data, czas, dataPełna: czas ? `${data}T${czas}` : `${data}T00:00`, kategoria, priorytet, opis, cykl, przypomnienie, osoba, kolor }); 
+        localStorage.setItem("narzedziaKalendarz", JSON.stringify(bazaKalendarz)); document.getElementById("noweWydarzenieTytulPremium").value = ""; document.getElementById("noweWydarzenieOpis").value = ""; renderujKalendarz(); 
     }); 
     renderujKalendarz();
 
@@ -407,94 +382,13 @@ document.addEventListener("DOMContentLoaded", function() {
     function renderujPosilki() { const lista = document.getElementById("listaPosilki"); lista.innerHTML = ""; bazaPosilki.sort((a,b) => (dniWaga[a.dzien] - dniWaga[b.dzien]) || (typWaga[a.typ] - typWaga[b.typ])); bazaPosilki.forEach(p => { const li = document.createElement("li"); li.className = "posilek-element"; li.innerHTML = `<div class="notatka-tekst"><span class="posilek-dzien">${p.dzien}</span><strong>${p.typ}</strong>: ${p.nazwa}</div><button class="btn-usun">🗑️</button>`; li.querySelector('.btn-usun').addEventListener('click', () => { bazaPosilki = bazaPosilki.filter(x => x.id !== p.id); localStorage.setItem("narzedziaPosilki", JSON.stringify(bazaPosilki)); renderujPosilki(); }); lista.appendChild(li); }); }
     document.getElementById("btnDodajPosilek").addEventListener("click", () => { const d = document.getElementById("nowyPosilekDzien").value; const t = document.getElementById("nowyPosilekTyp").value; const n = document.getElementById("nowyPosilekNazwa").value.trim(); if(!n) return; bazaPosilki.push({id: Date.now(), dzien: d, typ: t, nazwa: n}); localStorage.setItem("narzedziaPosilki", JSON.stringify(bazaPosilki)); document.getElementById("nowyPosilekNazwa").value=""; renderujPosilki(); }); renderujPosilki();
 
-    // EKRANY
-    function renderujEkrany() { 
-        const lista = document.getElementById("listaEkrany"); lista.innerHTML = ""; 
-        bazaEkrany.forEach(e => { 
-            const li = document.createElement("li"); li.className = "notatka-element"; 
-            li.innerHTML = `
-                <div class="notatka-tekst">
-                    <strong style="color:#475569;">${e.data} o ${e.godzina}</strong><br>
-                    ${e.akcja}: <strong style="color:#3b82f6;">${e.urzadzenie}</strong> 
-                    ${e.czas ? `<br><span style="color:#10b981; font-size:12px;">Zadeklarowano: ${e.czas} min</span>` : ''}
-                </div>
-                <button class="btn-usun" style="margin-left: 10px;">🗑️</button>
-            `; 
-            li.querySelector('.btn-usun').addEventListener('click', () => { 
-                bazaEkrany = bazaEkrany.filter(x => x.id !== e.id); 
-                localStorage.setItem("narzedziaEkrany", JSON.stringify(bazaEkrany)); 
-                renderujEkrany(); 
-            }); 
-            lista.appendChild(li); 
-        }); 
-    }
-    document.getElementById("btnDodajEkran").addEventListener("click", () => { 
-        const u = document.getElementById("nowyEkranUrzadzenie").value; 
-        const a = document.getElementById("nowyEkranAkcja").value; 
-        const c = document.getElementById("nowyEkranCzas").value; 
-        
-        const d = new Date(); 
-        const dStr = d.getDate().toString().padStart(2,'0') + "." + (d.getMonth()+1).toString().padStart(2,'0') + "." + d.getFullYear();
-        const tStr = d.getHours().toString().padStart(2,'0')+":"+d.getMinutes().toString().padStart(2,'0');
-        
-        bazaEkrany.unshift({ id: Date.now(), urzadzenie: u, akcja: a, czas: c, data: dStr, godzina: tStr }); 
-        localStorage.setItem("narzedziaEkrany", JSON.stringify(bazaEkrany)); 
-        document.getElementById("nowyEkranCzas").value = ""; 
-        
-        if(a.includes("Zdał sprzęt")) { alert("Świetnie! Dziecko zdało sprzęt. W nagrodę możesz dodać mu punkty w module Punkty ⭐!"); }
-        renderujEkrany(); 
-    }); 
-    renderujEkrany();
+    function renderujEkrany() { const lista = document.getElementById("listaEkrany"); lista.innerHTML = ""; bazaEkrany.forEach(e => { const li = document.createElement("li"); li.className = "notatka-element"; li.innerHTML = `<div class="notatka-tekst"><strong style="color:#475569;">${e.data} o ${e.godzina}</strong><br>${e.akcja}: <strong style="color:#3b82f6;">${e.urzadzenie}</strong> ${e.czas ? `<br><span style="color:#10b981; font-size:12px;">Zadeklarowano: ${e.czas} min</span>` : ''}</div><button class="btn-usun" style="margin-left: 10px;">🗑️</button>`; li.querySelector('.btn-usun').addEventListener('click', () => { bazaEkrany = bazaEkrany.filter(x => x.id !== e.id); localStorage.setItem("narzedziaEkrany", JSON.stringify(bazaEkrany)); renderujEkrany(); }); lista.appendChild(li); }); }
+    document.getElementById("btnDodajEkran").addEventListener("click", () => { const u = document.getElementById("nowyEkranUrzadzenie").value; const a = document.getElementById("nowyEkranAkcja").value; const c = document.getElementById("nowyEkranCzas").value; const d = new Date(); const dStr = d.getDate().toString().padStart(2,'0') + "." + (d.getMonth()+1).toString().padStart(2,'0') + "." + d.getFullYear(); const tStr = d.getHours().toString().padStart(2,'0')+":"+d.getMinutes().toString().padStart(2,'0'); bazaEkrany.unshift({ id: Date.now(), urzadzenie: u, akcja: a, czas: c, data: dStr, godzina: tStr }); localStorage.setItem("narzedziaEkrany", JSON.stringify(bazaEkrany)); document.getElementById("nowyEkranCzas").value = ""; if(a.includes("Zdał sprzęt")) { alert("Świetnie! Dziecko zdało sprzęt. W nagrodę możesz dodać mu punkty w module Punkty ⭐!"); } renderujEkrany(); }); renderujEkrany();
 
-    // SEJF (LOGIKA SKANERA)
-    let aktualnyZalacznikSejf = ""; 
-    const plikInput = document.getElementById("nowySejfPlik");
-    const podgladTekst = document.getElementById("podgladSejfPliku");
-
-    if(plikInput) {
-        plikInput.addEventListener("change", function(e) {
-            const file = e.target.files[0];
-            if (!file) return;
-            podgladTekst.innerText = "⏳ Optymalizacja zdjęcia...";
-            const reader = new FileReader();
-            reader.onload = function(event) {
-                const img = new Image();
-                img.onload = function() {
-                    const canvas = document.createElement("canvas");
-                    const MAX_WIDTH = 600; let scaleSize = 1;
-                    if (img.width > MAX_WIDTH) { scaleSize = MAX_WIDTH / img.width; }
-                    canvas.width = img.width * scaleSize; canvas.height = img.height * scaleSize;
-                    const ctx = canvas.getContext("2d"); ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                    aktualnyZalacznikSejf = canvas.toDataURL("image/jpeg", 0.7);
-                    podgladTekst.innerText = "✅ Skan gotowy do zabezpieczenia!";
-                };
-                img.src = event.target.result;
-            };
-            reader.readAsDataURL(file);
-        });
-    }
-
-    function renderujSejf() { 
-        const lista = document.getElementById("listaSejf"); lista.innerHTML = ""; 
-        bazaSejf.forEach(s => { 
-            const li = document.createElement("li"); li.className = "sejf-element"; 
-            let imgHtml = ""; if (s.zdjecie) { imgHtml = `<div style="margin-top:10px;"><img src="${s.zdjecie}" style="max-width: 100%; border-radius: 8px; border: 1px solid #cbd5e1; cursor: zoom-in;" onclick="window.open(this.src)" alt="Skan dokumentu"></div>`; }
-            li.innerHTML = `<div style="flex-grow: 1; margin-right: 15px;"><strong style="color:#1e293b;">${s.nazwa}</strong>${s.wartosc ? `<span class="sejf-wartosc">${s.wartosc}</span>` : ''}${imgHtml}</div><button class="btn-usun" style="flex-shrink: 0;">🗑️</button>`; 
-            li.querySelector('.btn-usun').addEventListener('click', () => { bazaSejf = bazaSejf.filter(x => x.id !== s.id); localStorage.setItem("narzedziaSejf", JSON.stringify(bazaSejf)); renderujSejf(); }); 
-            lista.appendChild(li); 
-        }); 
-    }
-    
-    document.getElementById("btnDodajSejf").addEventListener("click", () => { 
-        const n = document.getElementById("nowySejfKategoria").value; 
-        const w = document.getElementById("nowySejfWartosc").value.trim(); 
-        if(!w && !aktualnyZalacznikSejf) { return alert("Wpisz wartość lub dodaj zdjęcie dokumentu!"); }
-        bazaSejf.unshift({ id: Date.now(), nazwa: n, wartosc: w, zdjecie: aktualnyZalacznikSejf }); 
-        localStorage.setItem("narzedziaSejf", JSON.stringify(bazaSejf)); 
-        document.getElementById("nowySejfWartosc").value = ""; document.getElementById("nowySejfPlik").value = ""; aktualnyZalacznikSejf = ""; podgladTekst.innerText = "";
-        renderujSejf(); 
-    }); renderujSejf();
-
+    let aktualnyZalacznikSejf = ""; const plikInput = document.getElementById("nowySejfPlik"); const podgladTekst = document.getElementById("podgladSejfPliku");
+    if(plikInput) { plikInput.addEventListener("change", function(e) { const file = e.target.files[0]; if (!file) return; podgladTekst.innerText = "⏳ Optymalizacja zdjęcia..."; const reader = new FileReader(); reader.onload = function(event) { const img = new Image(); img.onload = function() { const canvas = document.createElement("canvas"); const MAX_WIDTH = 600; let scaleSize = 1; if (img.width > MAX_WIDTH) { scaleSize = MAX_WIDTH / img.width; } canvas.width = img.width * scaleSize; canvas.height = img.height * scaleSize; const ctx = canvas.getContext("2d"); ctx.drawImage(img, 0, 0, canvas.width, canvas.height); aktualnyZalacznikSejf = canvas.toDataURL("image/jpeg", 0.7); podgladTekst.innerText = "✅ Skan gotowy do zabezpieczenia!"; }; img.src = event.target.result; }; reader.readAsDataURL(file); }); }
+    function renderujSejf() { const lista = document.getElementById("listaSejf"); lista.innerHTML = ""; bazaSejf.forEach(s => { const li = document.createElement("li"); li.className = "sejf-element"; let imgHtml = ""; if (s.zdjecie) { imgHtml = `<div style="margin-top:10px;"><img src="${s.zdjecie}" style="max-width: 100%; border-radius: 8px; border: 1px solid #cbd5e1; cursor: zoom-in;" onclick="window.open(this.src)" alt="Skan dokumentu"></div>`; } li.innerHTML = `<div style="flex-grow: 1; margin-right: 15px;"><strong style="color:#1e293b;">${s.nazwa}</strong>${s.wartosc ? `<span class="sejf-wartosc">${s.wartosc}</span>` : ''}${imgHtml}</div><button class="btn-usun" style="flex-shrink: 0;">🗑️</button>`; li.querySelector('.btn-usun').addEventListener('click', () => { bazaSejf = bazaSejf.filter(x => x.id !== s.id); localStorage.setItem("narzedziaSejf", JSON.stringify(bazaSejf)); renderujSejf(); }); lista.appendChild(li); }); }
+    document.getElementById("btnDodajSejf").addEventListener("click", () => { const n = document.getElementById("nowySejfKategoria").value; const w = document.getElementById("nowySejfWartosc").value.trim(); if(!w && !aktualnyZalacznikSejf) { return alert("Wpisz wartość lub dodaj zdjęcie dokumentu!"); } bazaSejf.unshift({ id: Date.now(), nazwa: n, wartosc: w, zdjecie: aktualnyZalacznikSejf }); localStorage.setItem("narzedziaSejf", JSON.stringify(bazaSejf)); document.getElementById("nowySejfWartosc").value = ""; document.getElementById("nowySejfPlik").value = ""; aktualnyZalacznikSejf = ""; podgladTekst.innerText = ""; renderujSejf(); }); renderujSejf();
 
     function renderujRozmiary() { const lista = document.getElementById("listaRozmiarow"); lista.innerHTML = ""; bazaRozmiary.forEach(r => { const li = document.createElement("li"); li.className = "rozmiar-element"; li.innerHTML = `<div><div style="font-size: 12px; color: #64748b; margin-bottom: 5px;">Zaktualizowano: ${r.data}</div><div class="rozmiar-detale">${r.wzrost ? `<span>Wzrost: ${r.wzrost}cm</span>` : ''}${r.ubranie ? `<span>Ubranie: ${r.ubranie}</span>` : ''}${r.but ? `<span>But: ${r.but}</span>` : ''}</div></div><button class="btn-usun">🗑️</button>`; li.querySelector('.btn-usun').addEventListener('click', () => { bazaRozmiary = bazaRozmiary.filter(x => x.id !== r.id); localStorage.setItem("narzedziaRozmiary", JSON.stringify(bazaRozmiary)); renderujRozmiary(); }); lista.appendChild(li); }); }
     document.getElementById("btnDodajRozmiar").addEventListener("click", () => { const w = document.getElementById("nowyRozmiarWzrost").value; const u = document.getElementById("nowyRozmiarUbranie").value; const b = document.getElementById("nowyRozmiarBut").value; if(!w && !u && !b) return alert("Podaj chociaż jeden rozmiar!"); const d = new Date(); const dataStr = d.getDate().toString().padStart(2,'0') + "." + (d.getMonth()+1).toString().padStart(2,'0') + "." + d.getFullYear(); bazaRozmiary.unshift({ id: Date.now(), wzrost: w, ubranie: u, but: b, data: dataStr }); localStorage.setItem("narzedziaRozmiary", JSON.stringify(bazaRozmiary)); document.getElementById("nowyRozmiarWzrost").value=""; document.getElementById("nowyRozmiarUbranie").value=""; document.getElementById("nowyRozmiarBut").value=""; renderujRozmiary(); }); renderujRozmiary();
@@ -507,12 +401,10 @@ document.addEventListener("DOMContentLoaded", function() {
 
     function renderujPakowanie() { const lista = document.getElementById("listaPakowanie"); lista.innerHTML = ""; bazaPakowanie.forEach(p => { const li = document.createElement("li"); li.className = `pakowanie-element ${p.zrobione ? 'pakowanie-zrobione' : ''}`; li.innerHTML = `<div class="pakowanie-checkbox">✓</div><div class="pakowanie-tekst">${p.nazwa}</div><button class="btn-usun" style="margin-left: 10px; flex-shrink:0;">🗑️</button>`; li.addEventListener('click', (e) => { if(!e.target.classList.contains('btn-usun')) { p.zrobione = !p.zrobione; localStorage.setItem("narzedziaPakowanie", JSON.stringify(bazaPakowanie)); renderujPakowanie(); } }); li.querySelector('.btn-usun').addEventListener('click', (e) => { e.stopPropagation(); bazaPakowanie = bazaPakowanie.filter(x => x.id !== p.id); localStorage.setItem("narzedziaPakowanie", JSON.stringify(bazaPakowanie)); renderujPakowanie(); }); lista.appendChild(li); }); }
     document.getElementById("btnDodajRzeczPakowanie").addEventListener("click", () => { const n = document.getElementById("nowaRzeczPakowanie").value.trim(); if(!n) return; bazaPakowanie.unshift({id: Date.now(), nazwa: n, zrobione: false}); localStorage.setItem("narzedziaPakowanie", JSON.stringify(bazaPakowanie)); document.getElementById("nowaRzeczPakowanie").value=""; renderujPakowanie(); });
-    document.getElementById("btnWyczyscPakowanie").addEventListener("click", () => { bazaPakowanie.forEach(p => p.zrobione = false); localStorage.setItem("narzedziaPakowanie", JSON.stringify(bazaPakowanie)); renderujPakowanie(); });
-    renderujPakowanie();
+    document.getElementById("btnWyczyscPakowanie").addEventListener("click", () => { bazaPakowanie.forEach(p => p.zrobione = false); localStorage.setItem("narzedziaPakowanie", JSON.stringify(bazaPakowanie)); renderujPakowanie(); }); renderujPakowanie();
 
     function renderujOsiagniecia() { const lista = document.getElementById("listaOsiagniecia"); lista.innerHTML = ""; bazaOsiagniecia.sort((a,b) => new Date(b.data) - new Date(a.data)); bazaOsiagniecia.forEach(o => { const li = document.createElement("li"); li.className = "osiagniecie-element"; const dataObj = new Date(o.data); const dStr = dataObj.getDate().toString().padStart(2,'0')+"."+(dataObj.getMonth()+1).toString().padStart(2,'0')+"."+dataObj.getFullYear(); li.innerHTML = `<div class="osiagniecie-ikona">🌟</div><div class="osiagniecie-info"><span class="osiagniecie-tytul">${o.nazwa}</span><span class="osiagniecie-data">${dStr}</span></div><button class="btn-usun" style="position:relative; z-index:5;">🗑️</button>`; li.querySelector('.btn-usun').addEventListener('click', () => { bazaOsiagniecia = bazaOsiagniecia.filter(x => x.id !== o.id); localStorage.setItem("narzedziaOsiagniecia", JSON.stringify(bazaOsiagniecia)); renderujOsiagniecia(); }); lista.appendChild(li); }); }
-    document.getElementById("btnDodajSukces").addEventListener("click", () => { const n = document.getElementById("nowySukcesNazwa").value.trim(); const d = document.getElementById("nowySukcesData").value; if(!n || !d) return; bazaOsiagniecia.push({id: Date.now(), nazwa: n, data: d}); localStorage.setItem("narzedziaOsiagniecia", JSON.stringify(bazaOsiagniecia)); document.getElementById("nowySukcesNazwa").value=""; document.getElementById("nowySukcesData").value=""; renderujOsiagniecia(); });
-    renderujOsiagniecia();
+    document.getElementById("btnDodajSukces").addEventListener("click", () => { const n = document.getElementById("nowySukcesNazwa").value.trim(); const d = document.getElementById("nowySukcesData").value; if(!n || !d) return; bazaOsiagniecia.push({id: Date.now(), nazwa: n, data: d}); localStorage.setItem("narzedziaOsiagniecia", JSON.stringify(bazaOsiagniecia)); document.getElementById("nowySukcesNazwa").value=""; document.getElementById("nowySukcesData").value=""; renderujOsiagniecia(); }); renderujOsiagniecia();
 
     function aktualizujPortfel() { document.getElementById("sumaPunktow").innerText = mojePunkty; document.getElementById("sumaPunktowDziecko").innerText = mojePunkty; localStorage.setItem("gryPunkty", mojePunkty); }
     function renderujOczekujace() { const s = document.getElementById("sekcjaOczekujace"); const l = document.getElementById("listaOczekujacych"); if (oczekujaceZadania.length === 0) { s.style.display = "none"; } else { s.style.display = "block"; l.innerHTML = ""; oczekujaceZadania.forEach(ocz => { const li = document.createElement("li"); li.style.borderLeftColor = "#f59e0b"; li.innerHTML = `<div class="akcja-info"><span class="akcja-nazwa">${ocz.nazwa}</span><span class="akcja-punkty" style="color:#f59e0b; background:#fef3c7;">+${ocz.punkty} ⭐</span></div><div style="display:flex; gap:5px;"><button class="btn-wykonaj" style="background-color:#f59e0b;">✔️</button><button class="btn-usun">❌</button></div>`; li.querySelector('.btn-wykonaj').addEventListener('click', () => { mojePunkty += ocz.punkty; aktualizujPortfel(); usunZOczekujacych(ocz.id); alert(`Zatwierdzono! +${ocz.punkty} ⭐`); }); li.querySelector('.btn-usun').addEventListener('click', () => { usunZOczekujacych(ocz.id); }); l.appendChild(li); }); } }
@@ -533,9 +425,9 @@ document.addEventListener("DOMContentLoaded", function() {
     function renderujCzat() {
         let powitanieHTML = "";
         if (czyPremium) {
-            powitanieHTML = `<div class="dymek-czatu dymek-inny"><div class="czat-autor">Asystent D@niel (Premium) 👑</div><div class="czat-tresc">Cześć! Potrafię zarządzać aplikacją. Spróbuj napisać:<br><br><i>"Ustaw stoper na 5 minut"</i><br><i>"Zapisz karmienie z prawej piersi"</i><br><i>"Podałem 5ml ibuprofenu"</i><br><i>"Wydałem 15 zł na lody"</i><br><i>"Młody zdał telefon"</i></div></div>`;
+            powitanieHTML = `<div class="dymek-czatu dymek-inny"><div class="czat-autor">${czyTrial ? "Asystent (Próbne Premium)" : "Asystent D@niel (Premium) 👑"}</div><div class="czat-tresc">Cześć! Potrafię zarządzać aplikacją. Spróbuj napisać:<br><br><i>"Ustaw stoper na 5 minut"</i><br><i>"Zapisz karmienie z prawej piersi"</i><br><i>"Podałem 5ml ibuprofenu"</i><br><i>"Wydałem 15 zł na lody"</i><br><i>"Młody zdał telefon"</i></div></div>`;
         } else {
-            powitanieHTML = `<div class="dymek-czatu dymek-inny"><div class="czat-autor">Asystent D@niel (Demo) 🤖</div><div class="czat-tresc">Cześć! W darmowej wersji służę radą i wsparciem. Zapytaj mnie o katar lub poproś o żart.<br><br>W wersji <strong>Premium</strong> potrafię automatycznie zapisywać Twoje wydatki, leki i czas ekranowy!</div></div>`;
+            powitanieHTML = `<div class="dymek-czatu dymek-inny"><div class="czat-autor">Asystent D@niel (Wersja Darmowa) 🤖</div><div class="czat-tresc">Cześć! W darmowej wersji służę radą i wsparciem. Zapytaj mnie o katar lub poproś o żart.<br><br>W wersji <strong>Premium</strong> potrafię automatycznie zapisywać Twoje wydatki, leki i czas ekranowy!</div></div>`;
         }
         
         oknoCzatu.innerHTML = powitanieHTML;
@@ -588,35 +480,21 @@ document.addEventListener("DOMContentLoaded", function() {
                 if (zapytanie.includes("zdał") || zapytanie.includes("grał") || zapytanie.includes("konsol") || zapytanie.includes("telefon")) {
                     const u = zapytanie.includes("telefon") ? "📱 Telefon" : (zapytanie.includes("konsol") ? "🎮 Konsola" : "💻 Komputer PC");
                     const a = zapytanie.includes("zdał") || zapytanie.includes("wyłączył") ? "🛑 Zdał sprzęt" : "▶️ Start";
-                    const liczby = zapytanie.match(/\d+/);
-                    const c = liczby ? liczby[0] : "";
-                    
-                    const d = new Date(); 
-                    const dStr = d.getDate().toString().padStart(2,'0') + "." + (d.getMonth()+1).toString().padStart(2,'0') + "." + d.getFullYear();
-                    const tStr = d.getHours().toString().padStart(2,'0')+":"+d.getMinutes().toString().padStart(2,'0');
-                    
-                    if(typeof bazaEkrany !== 'undefined') {
-                        bazaEkrany.unshift({ id: Date.now(), urzadzenie: u, akcja: a, czas: c, data: dStr, godzina: tStr }); 
-                        localStorage.setItem("narzedziaEkrany", JSON.stringify(bazaEkrany)); 
-                        if(typeof renderujEkrany === "function") renderujEkrany();
-                    }
-                    
+                    const liczby = zapytanie.match(/\d+/); const c = liczby ? liczby[0] : "";
+                    const d = new Date(); const dStr = d.getDate().toString().padStart(2,'0') + "." + (d.getMonth()+1).toString().padStart(2,'0') + "." + d.getFullYear(); const tStr = d.getHours().toString().padStart(2,'0')+":"+d.getMinutes().toString().padStart(2,'0');
+                    if(typeof bazaEkrany !== 'undefined') { bazaEkrany.unshift({ id: Date.now(), urzadzenie: u, akcja: a, czas: c, data: dStr, godzina: tStr }); localStorage.setItem("narzedziaEkrany", JSON.stringify(bazaEkrany)); if(typeof renderujEkrany === "function") renderujEkrany(); }
                     odpTresc = `Zanotowano czas przed ekranem! Urządzenie: ${u}, Akcja: ${a}${c ? ' ('+c+' min)' : ''}. Widać postępy w cyfrowym detoksie! 🛡️`;
                 }
                 else if (zapytanie.includes("karmienie") || zapytanie.includes("zjadł") || zapytanie.includes("wypił")) {
-                    const liczby = zapytanie.match(/\d+/);
-                    let typ = zapytanie.includes("lew") ? "Lewa Pierś" : (zapytanie.includes("praw") ? "Prawa Pierś" : "Butelka");
-                    let ilosc = liczby ? liczby[0] : "";
+                    const liczby = zapytanie.match(/\d+/); let typ = zapytanie.includes("lew") ? "Lewa Pierś" : (zapytanie.includes("praw") ? "Prawa Pierś" : "Butelka"); let ilosc = liczby ? liczby[0] : "";
                     const now = new Date(); const d = now.toISOString().split('T')[0]; const c = now.toTimeString().substring(0,5);
-                    bazaKarmienie.unshift({ id: Date.now(), typ: typ, ilosc: ilosc, data: d, czas: c });
-                    localStorage.setItem("narzedziaKarmienie", JSON.stringify(bazaKarmienie)); renderujKarmienie();
+                    bazaKarmienie.unshift({ id: Date.now(), typ: typ, ilosc: ilosc, data: d, czas: c }); localStorage.setItem("narzedziaKarmienie", JSON.stringify(bazaKarmienie)); renderujKarmienie();
                     odpTresc = `Słodkiego apetytu! 🍼 Zanotowałem karmienie (${typ} ${ilosc ? ilosc+'ml' : ''}) o godzinie ${c}.`;
                 }
                 else if (zapytanie.includes("wydał") || zapytanie.includes("kupił") || zapytanie.includes("kosztował") || zapytanie.includes("wydatek")) {
                     const liczby = zapytanie.match(/\d+(\.\d+)?/);
                     if (liczby) {
-                        const kwota = parseFloat(liczby[0]);
-                        const opisTytulu = tekst.replace(liczby[0], "").replace(/wydałem|wydałam|kupiłem|kupiłam|kosztowało|na|zł|wydatek/gi, "").trim() || "Zakupy (z czatu)";
+                        const kwota = parseFloat(liczby[0]); const opisTytulu = tekst.replace(liczby[0], "").replace(/wydałem|wydałam|kupiłem|kupiłam|kosztowało|na|zł|wydatek/gi, "").trim() || "Zakupy (z czatu)";
                         const dStr = new Date().toLocaleString('pl-PL', {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'});
                         historiaFinansow.unshift({ opis: opisTytulu.charAt(0).toUpperCase() + opisTytulu.slice(1), kwota: -kwota, data: dStr });
                         saldoFinansow -= kwota; localStorage.setItem("gryHistoriaFinansow", JSON.stringify(historiaFinansow)); aktualizujKonto(); renderujTransakcje();
@@ -630,8 +508,7 @@ document.addEventListener("DOMContentLoaded", function() {
                 }
                 else if (zapytanie.includes("podał") && (zapytanie.includes("ml") || zapytanie.includes("ibuprofen") || zapytanie.includes("paracetamol"))) {
                     const lek = zapytanie.includes("ibuprofen") ? "Ibuprofen" : (zapytanie.includes("paracetamol") ? "Paracetamol" : "Inny lek");
-                    const liczby = zapytanie.match(/\d+(\.\d+)?/); const dawka = liczby ? liczby[0] + " ml" : "Nieznana dawka";
-                    const d = new Date(); 
+                    const liczby = zapytanie.match(/\d+(\.\d+)?/); const dawka = liczby ? liczby[0] + " ml" : "Nieznana dawka"; const d = new Date(); 
                     bazaZdarzen.unshift({ typ: lek, lek: `💊 ${lek} (z czatu)`, dawka: dawka, czasWpisu: d.getTime(), godzinaWyswietlana: d.getHours().toString().padStart(2,'0')+":"+d.getMinutes().toString().padStart(2,'0') }); 
                     localStorage.setItem("medHistoria", JSON.stringify(bazaZdarzen)); odswiezZdarzenia();
                     odpTresc = `Zanotowałem w Apteczce! Podałeś <strong>${lek}</strong> w dawce <strong>${dawka}</strong> o godzinie ${d.getHours().toString().padStart(2,'0')+":"+d.getMinutes().toString().padStart(2,'0')}. Zdrowia! 🩺`;
@@ -639,15 +516,13 @@ document.addEventListener("DOMContentLoaded", function() {
                 else if (zapytanie.includes("sukces") || zapytanie.includes("osiągnięcie")) {
                     const nazwaSukcesu = tekst.replace(/dodaj sukces/i, "").replace(/zapisz sukces/i, "").replace(/osiągnięcie/i, "").trim() || "Nowy sukces dziecka!";
                     const d = new Date().toISOString().split('T')[0];
-                    bazaOsiagniecia.push({id: Date.now(), nazwa: nazwaSukcesu.charAt(0).toUpperCase() + nazwaSukcesu.slice(1), data: d}); 
-                    localStorage.setItem("narzedziaOsiagniecia", JSON.stringify(bazaOsiagniecia)); renderujOsiagniecia();
+                    bazaOsiagniecia.push({id: Date.now(), nazwa: nazwaSukcesu.charAt(0).toUpperCase() + nazwaSukcesu.slice(1), data: d}); localStorage.setItem("narzedziaOsiagniecia", JSON.stringify(bazaOsiagniecia)); renderujOsiagniecia();
                     odpTresc = `Wielkie brawa! 🥳 Zapisano w Osiągnięciach: <strong>"${nazwaSukcesu}"</strong> z dzisiejszą datą. Oby tak dalej!`;
                 }
                 else if (zapytanie.includes("rozmiar")) {
                     const liczby = zapytanie.match(/\d+/);
                     if(liczby) {
-                        const rodzaj = zapytanie.includes("but") ? "but" : (zapytanie.includes("ubran") ? "ubranie" : "wzrost");
-                        const wartosc = liczby[0];
+                        const rodzaj = zapytanie.includes("but") ? "but" : (zapytanie.includes("ubran") ? "ubranie" : "wzrost"); const wartosc = liczby[0];
                         const d = new Date(); const dataStr = d.getDate().toString().padStart(2,'0') + "." + (d.getMonth()+1).toString().padStart(2,'0') + "." + d.getFullYear(); 
                         let nowyRozmiar = { id: Date.now(), wzrost: "", ubranie: "", but: "", data: dataStr };
                         if(rodzaj === "but") nowyRozmiar.but = wartosc; else if (rodzaj === "wzrost") nowyRozmiar.wzrost = wartosc; else nowyRozmiar.ubranie = wartosc;
@@ -695,7 +570,7 @@ document.addEventListener("DOMContentLoaded", function() {
                 }
             }
             
-            let nazwaBota = czyPremium ? "Asystent D@niel (Premium) 👑" : "Asystent D@niel 🤖";
+            let nazwaBota = czyPremiumPelne ? "Asystent D@niel (Premium) 👑" : (czyTrial ? "Asystent (Próbne Premium)" : "Asystent D@niel 🤖");
             bazaCzatu.push({ autor: nazwaBota, moja: false, tekst: odpTresc.replace(/\n/g, "<br>") }); 
             localStorage.setItem("narzedziaAsystent", JSON.stringify(bazaCzatu)); renderujCzat();
         }, 1500); 
