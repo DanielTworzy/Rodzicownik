@@ -56,9 +56,13 @@ document.addEventListener("DOMContentLoaded", function() {
         czyTrial = true;
         let resztaGodzin = Math.floor((koniecTrialu - Date.now()) / (1000 * 60 * 60));
         pozostaloTrialText = `${Math.floor(resztaGodzin / 24)} dni i ${resztaGodzin % 24} godz.`;
+    } else if (!czyPremiumPelne && koniecTrialu > Date.now()) {
+        czyTrial = true;
+        let resztaGodzin = Math.floor((koniecTrialu - Date.now()) / (1000 * 60 * 60));
+        pozostaloTrialText = `${Math.floor(resztaGodzin / 24)} dni i ${resztaGodzin % 24} godz.`;
     } else if (!czyPremiumPelne && koniecTrialu > 0 && koniecTrialu <= Date.now()) {
-        usunZChmury("premiumTrialEnd");
-        koniecTrialu = 0;
+        // WAŻNE: Nie usuwamy z chmury, żeby baza pamiętała, że trial był wykorzystany!
+        czyTrial = false;
     }
     
     let czyPremium = czyPremiumPelne || czyTrial;
@@ -130,6 +134,27 @@ document.addEventListener("DOMContentLoaded", function() {
                 const daneZChmury = snapshot.val();
                 if (daneZChmury) {
                     if (daneZChmury.rodzicownikPremium) czyPremiumPelne = (daneZChmury.rodzicownikPremium === "true");
+                    
+                    // --- START NOWEJ WERYFIKACJI TRIALU ---
+                    if (daneZChmury.premiumTrialEnd) {
+                        koniecTrialu = parseInt(daneZChmury.premiumTrialEnd);
+                        if (koniecTrialu > Date.now()) {
+                            czyTrial = true;
+                            let resztaGodzin = Math.floor((koniecTrialu - Date.now()) / (1000 * 60 * 60));
+                            pozostaloTrialText = `${Math.floor(resztaGodzin / 24)} dni i ${resztaGodzin % 24} godz.`;
+                        } else {
+                            czyTrial = false;
+                        }
+                        // Użytkownik miał/ma trial - bezwzględnie chowamy przycisk w nowej przeglądarce
+                        const btnTrial = document.getElementById("btnTrialPremium");
+                        if (btnTrial) btnTrial.style.display = "none";
+                    }
+                    if (czyPremiumPelne) {
+                        const btnTrial = document.getElementById("btnTrialPremium");
+                        if (btnTrial) btnTrial.style.display = "none";
+                    }
+                    // --- KONIEC NOWEJ WERYFIKACJI TRIALU ---
+
                     czyPremium = czyPremiumPelne || czyTrial;
                     if (daneZChmury.medBazaProfili) bazaProfili = daneZChmury.medBazaProfili;
                     if (daneZChmury.medAktywnyProfilId) aktywnyProfilId = daneZChmury.medAktywnyProfilId;
@@ -346,11 +371,25 @@ document.addEventListener("DOMContentLoaded", function() {
 
     const przyciskTrial = document.getElementById("btnTrialPremium");
     if(przyciskTrial) {
-        if(localStorage.getItem("premiumTrialEnd") || czyPremiumPelne) { przyciskTrial.style.display = "none"; }
+        // Chowamy na starcie, jeśli jest jakikolwiek ślad trialu lub pełnego premium
+        if(localStorage.getItem("premiumTrialEnd") || koniecTrialu > 0 || czyPremiumPelne) { 
+            przyciskTrial.style.display = "none"; 
+        }
+        
         przyciskTrial.addEventListener("click", () => {
-            if(localStorage.getItem("premiumTrialEnd")) return alert("Wykorzystałeś już swój darmowy okres próbny!");
-            zapiszWChmurze("premiumTrialEnd", Date.now() + (3 * 24 * 60 * 60 * 1000));
-            alert("🎉 Gratulacje! Rozpocząłeś 3-dniowy okres próbny wersji Premium. Masz dostęp do wszystkich funkcji!"); location.reload();
+            // Twarda weryfikacja przed samym nadaniem (sprawdza pamięć i zmienną z bazy)
+            if(localStorage.getItem("premiumTrialEnd") || koniecTrialu > 0 || czyPremiumPelne) {
+                przyciskTrial.style.display = "none"; // Chowamy go, żeby nie korcił
+                return alert("Wykorzystałeś już swój darmowy okres próbny!");
+            }
+            
+            // Nadajemy trial i od razu zapisujemy do zmiennej w RAM
+            let nowaDataKonca = Date.now() + (3 * 24 * 60 * 60 * 1000);
+            koniecTrialu = nowaDataKonca; 
+            zapiszWChmurze("premiumTrialEnd", nowaDataKonca);
+            
+            alert("🎉 Gratulacje! Rozpocząłeś 3-dniowy okres próbny wersji Premium. Masz dostęp do wszystkich funkcji!"); 
+            location.reload();
         });
     }
 
