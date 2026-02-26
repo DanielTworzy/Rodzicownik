@@ -72,7 +72,8 @@ document.addEventListener("DOMContentLoaded", function() {
     let aktualnyPin = localStorage.getItem("rodzicPin") || "1234";
     let mojePunkty = parseInt(localStorage.getItem("gryPunkty")) || 0; 
     let bazaZadan = JSON.parse(localStorage.getItem("gryZadania")) || [{ id: 1, nazwa: "Pościelenie łóżka", punkty: 10 }]; 
-    let bazaNagrod = JSON.parse(localStorage.getItem("gryNagrody")) || [{ id: 1, nazwa: "30 min bajek", koszt: 50 }]; 
+    let bazaNagrod = JSON.parse(localStorage.getItem("gryNagrody")) || [{ id: 1, nazwa: "30 min bajek", koszt: 50 }];
+    let celSkarbonki = JSON.parse(localStorage.getItem("gryCelSkarbonki")) || null; 
     let oczekujaceZadania = JSON.parse(localStorage.getItem("gryOczekujace")) || [];
     let bazaNotatek = JSON.parse(localStorage.getItem("narzedziaNotatki")) || [];
     let saldoFinansow = parseFloat(localStorage.getItem("grySaldo")) || 0.00; 
@@ -170,6 +171,7 @@ document.addEventListener("DOMContentLoaded", function() {
                     if (daneZChmury.gryOczekujace) oczekujaceZadania = daneZChmury.gryOczekujace;
                     if (daneZChmury.gryZadania) bazaZadan = daneZChmury.gryZadania;
                     if (daneZChmury.gryNagrody) bazaNagrod = daneZChmury.gryNagrody;
+                    if (daneZChmury.gryCelSkarbonki) celSkarbonki = daneZChmury.gryCelSkarbonki;
                     if (daneZChmury.gryHistoriaFinansow) historiaFinansow = daneZChmury.gryHistoriaFinansow;
                     if (daneZChmury.narzedziaNotatki) bazaNotatek = daneZChmury.narzedziaNotatki;
                     if (daneZChmury.narzedziaKalendarz) bazaKalendarz = daneZChmury.narzedziaKalendarz;
@@ -225,6 +227,7 @@ document.addEventListener("DOMContentLoaded", function() {
         updates['gryOczekujace'] = oczekujaceZadania;
         updates['gryZadania'] = bazaZadan;
         updates['gryNagrody'] = bazaNagrod;
+        updates['gryCelSkarbonki'] = celSkarbonki;
         updates['grySaldo'] = saldoFinansow;
         updates['gryHistoriaFinansow'] = historiaFinansow;
         updates['narzedziaNotatki'] = bazaNotatek;
@@ -620,8 +623,179 @@ document.addEventListener("DOMContentLoaded", function() {
     function renderujOczekujace() { const s = document.getElementById("sekcjaOczekujace"); const l = document.getElementById("listaOczekujacych"); if (oczekujaceZadania.length === 0) { s.style.display = "none"; } else { s.style.display = "block"; l.innerHTML = ""; oczekujaceZadania.forEach(ocz => { const li = document.createElement("li"); li.style.borderLeftColor = "#f59e0b"; li.innerHTML = `<div class="akcja-info"><span class="akcja-nazwa">${ocz.nazwa}</span><span class="akcja-punkty" style="color:#f59e0b; background:#fef3c7;">+${ocz.punkty} ⭐</span></div><div style="display:flex; gap:5px;"><button class="btn-wykonaj" style="background-color:#f59e0b;">✔️</button><button class="btn-usun">❌</button></div>`; li.querySelector('.btn-wykonaj').addEventListener('click', () => { mojePunkty += ocz.punkty; aktualizujPortfel(); usunZOczekujacych(ocz.id); alert(`Zatwierdzono! +${ocz.punkty} ⭐`); }); li.querySelector('.btn-usun').addEventListener('click', () => { usunZOczekujacych(ocz.id); }); l.appendChild(li); }); } }
     function usunZOczekujacych(id) { oczekujaceZadania = oczekujaceZadania.filter(o => o.id !== id); zapiszWChmurze("gryOczekujace", oczekujaceZadania); renderujOczekujace(); }
     function renderujZadania() { document.getElementById("listaZadan").innerHTML = ""; bazaZadan.forEach(z => { const li = document.createElement("li"); li.innerHTML = `<div class="akcja-info"><span class="akcja-nazwa">${z.nazwa}</span><span class="akcja-punkty">+${z.punkty} ⭐</span></div><div style="display:flex; gap:5px;"><button class="btn-wykonaj">✅</button><button class="btn-usun">🗑️</button></div>`; li.querySelector('.btn-wykonaj').addEventListener('click', () => { mojePunkty += z.punkty; aktualizujPortfel(); alert(`Dodano ${z.punkty} ⭐!`); }); li.querySelector('.btn-usun').addEventListener('click', () => { bazaZadan = bazaZadan.filter(x => x.id !== z.id); zapiszWChmurze("gryZadania", bazaZadan); renderujZadania(); renderujWidokDziecka(); }); document.getElementById("listaZadan").appendChild(li); }); }
-    function renderujNagrody() { document.getElementById("listaNagrod").innerHTML = ""; bazaNagrod.forEach(n => { const li = document.createElement("li"); li.innerHTML = `<div class="akcja-info"><span class="akcja-nazwa">${n.nazwa}</span><span class="akcja-punkty akcja-koszt">-${n.koszt} ⭐</span></div><div><button class="btn-usun">🗑️</button></div>`; li.querySelector('.btn-usun').addEventListener('click', () => { bazaNagrod = bazaNagrod.filter(x => x.id !== n.id); zapiszWChmurze("gryNagrody", bazaNagrod); renderujNagrody(); renderujWidokDziecka(); }); document.getElementById("listaNagrod").appendChild(li); }); }
-    function renderujWidokDziecka() { aktualizujPortfel(); aktualizujKonto(); document.getElementById("listaZadanDziecko").innerHTML = ""; bazaZadan.forEach(z => { const li = document.createElement("li"); li.innerHTML = `<div class="akcja-info"><span class="akcja-nazwa">${z.nazwa}</span><span class="akcja-punkty">+${z.punkty} ⭐</span></div><button class="btn-wykonaj" style="padding: 12px; background-color:#f59e0b;">📤 Zgłoś!</button>`; li.querySelector('.btn-wykonaj').addEventListener('click', () => { oczekujaceZadania.push({ id: Date.now(), nazwa: z.nazwa, punkty: z.punkty }); zapiszWChmurze("gryOczekujace", oczekujaceZadania); renderujOczekujace(); alert(`Wysłano do sprawdzenia!`); }); document.getElementById("listaZadanDziecko").appendChild(li); }); document.getElementById("listaNagrodDziecko").innerHTML = ""; bazaNagrod.forEach(n => { const s = mojePunkty >= n.koszt; const li = document.createElement("li"); li.innerHTML = `<div class="akcja-info"><span class="akcja-nazwa">${n.nazwa}</span><span class="akcja-koszt">-${n.koszt} ⭐</span></div><button class="btn-kup" style="padding: 12px; border-radius:12px; ${s ? 'background-color: #ec4899;' : 'background-color: #cbd5e1; cursor: not-allowed;'}">${s ? '🎁 Wybieram!' : '🔒 Za mało ⭐'}</button>`; li.querySelector('.btn-kup').addEventListener('click', () => { if (s) { mojePunkty -= n.koszt; aktualizujPortfel(); renderujWidokDziecka(); alert(`Wybrałeś: ${n.nazwa}!`); } else { alert("Za mało punktów!"); } }); document.getElementById("listaNagrodDziecko").appendChild(li); }); }
+    function renderujNagrody() {
+        const lista = document.getElementById("listaNagrod");
+        lista.innerHTML = "";
+        bazaNagrod.forEach(n => {
+            const li = document.createElement("li");
+            // Sprawdzamy, czy ta nagroda jest aktualnym celem
+            const czyToCel = celSkarbonki && celSkarbonki.id === n.id;
+            const stylCelu = czyToCel ? "border: 2px solid #ec4899; background: #fce7f3;" : "";
+            
+            li.style = stylCelu;
+            li.innerHTML = `
+                <div class="akcja-info">
+                    <span class="akcja-nazwa">${czyToCel ? '🎯 ' : ''}${n.nazwa}</span>
+                    <span class="akcja-punkty akcja-koszt">-${n.koszt} ⭐</span>
+                </div>
+                <div style="display:flex; gap:5px;">
+                    ${!czyToCel ? `<button class="btn-cel" style="background:#ec4899; font-size:12px;">🎯 Cel</button>` : ''}
+                    <button class="btn-usun">🗑️</button>
+                </div>`;
+            
+            // Obsługa przycisku "Ustaw jako Cel"
+            if (!czyToCel) {
+                li.querySelector('.btn-cel').addEventListener('click', () => {
+                    celSkarbonki = n;
+                    zapiszWChmurze("gryCelSkarbonki", celSkarbonki);
+                    renderujNagrody();
+                    alert(`Super! Ustawiono cel: ${n.nazwa}. Dziecko zobaczy go teraz na swoim ekranie.`);
+                });
+            }
+
+            li.querySelector('.btn-usun').addEventListener('click', () => {
+                bazaNagrod = bazaNagrod.filter(x => x.id !== n.id);
+                if (celSkarbonki && celSkarbonki.id === n.id) { celSkarbonki = null; zapiszWChmurze("gryCelSkarbonki", null); }
+                zapiszWChmurze("gryNagrody", bazaNagrod);
+                renderujNagrody();
+            });
+            lista.appendChild(li);
+        });
+    }
+    function renderujWidokDziecka() {
+        aktualizujPortfel();
+        aktualizujKonto();
+
+        // --- 1. SEKCJA SKARBONKI ---
+        const kontenerDziecka = document.getElementById("ekranDziecka");
+        // Usuwamy starą skarbonkę jeśli istnieje, żeby nie dublować
+        const staraSkarbonka = document.getElementById("sekcjaSkarbonki");
+        if(staraSkarbonka) staraSkarbonka.remove();
+
+        if (celSkarbonki) {
+            const procent = Math.min(100, Math.floor((mojePunkty / celSkarbonki.koszt) * 100));
+            const czyGotowe = mojePunkty >= celSkarbonki.koszt;
+            
+            const divSkarbonka = document.createElement("div");
+            divSkarbonka.id = "sekcjaSkarbonki";
+            divSkarbonka.style = "margin: 20px; padding: 20px; background: #fff; border-radius: 20px; box-shadow: 0 4px 15px rgba(236, 72, 153, 0.2); text-align: center; border: 2px solid #fbcfe8;";
+            
+            divSkarbonka.innerHTML = `
+                <div style="font-size: 14px; color: #831843; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px;">Twój Wielki Cel:</div>
+                <div style="font-size: 24px; font-weight: bold; color: #db2777; margin-bottom: 15px;">${celSkarbonki.nazwa}</div>
+                
+                <div style="position: relative; height: 25px; background: #f3f4f6; border-radius: 15px; overflow: hidden; margin-bottom: 10px; border: 1px solid #e5e7eb;">
+                    <div style="width: ${procent}%; height: 100%; background: linear-gradient(90deg, #ec4899, #be185d); transition: width 1s ease-in-out;"></div>
+                    <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 12px; color: ${procent > 55 ? '#fff' : '#000'}; font-weight: bold;">${procent}%</div>
+                </div>
+                
+                <div style="display: flex; justify-content: space-between; font-size: 14px; color: #64748b;">
+                    <span>⭐ Masz: <strong>${mojePunkty}</strong></span>
+                    <span>Cel: <strong>${celSkarbonki.koszt}</strong></span>
+                </div>
+
+                ${czyGotowe ? `<button id="btnOdbierzNagrode" style="margin-top: 15px; width: 100%; padding: 12px; background: #10b981; color: white; border: none; border-radius: 12px; font-size: 18px; font-weight: bold; cursor: pointer; animation: pulse 1.5s infinite;">🎁 ODBIERZ NAGRODĘ! 🎁</button>` : ''}
+            `;
+
+            // Wstawiamy skarbonkę PRZED listą zadań
+            const listaZadan = document.getElementById("listaZadanDziecko");
+            kontenerDziecka.insertBefore(divSkarbonka, listaZadan.parentNode); // Wstawia nad kontenerem zadań
+
+            // Obsługa odbioru nagrody
+            if (czyGotowe) {
+                // Efekt konfetti przy wejściu jeśli gotowe
+                setTimeout(uruchomKonfetti, 500);
+                
+                document.getElementById("btnOdbierzNagrode").addEventListener("click", () => {
+                    if(confirm(`Czy na pewno odbierasz nagrodę: ${celSkarbonki.nazwa}? Punkty zostaną pobrane.`)) {
+                        mojePunkty -= celSkarbonki.koszt;
+                        celSkarbonki = null; // Cel zrealizowany, usuwamy go
+                        zapiszWChmurze("gryPunkty", mojePunkty);
+                        zapiszWChmurze("gryCelSkarbonki", null);
+                        uruchomKonfetti(); // Jeszcze raz konfetti!
+                        alert("🎉 Gratulacje! Nagroda jest Twoja! Pokaż ten ekran rodzicom.");
+                        renderujWidokDziecka();
+                    }
+                });
+            }
+        }
+
+        // --- 2. LISTA ZADAŃ (BEZ ZMIAN, TYLKO GENEROWANIE) ---
+        document.getElementById("listaZadanDziecko").innerHTML = "";
+        bazaZadan.forEach(z => {
+            const li = document.createElement("li");
+            li.innerHTML = `
+                <div class="akcja-info">
+                    <span class="akcja-nazwa">${z.nazwa}</span>
+                    <span class="akcja-punkty">+${z.punkty} ⭐</span>
+                </div>
+                <button class="btn-wykonaj" style="padding: 12px; background-color:#f59e0b;">📤 Zgłoś!</button>`;
+            
+            li.querySelector('.btn-wykonaj').addEventListener('click', () => {
+                oczekujaceZadania.push({ id: Date.now(), nazwa: z.nazwa, punkty: z.punkty });
+                zapiszWChmurze("gryOczekujace", oczekujaceZadania);
+                renderujOczekujace();
+                alert(`Wysłano do sprawdzenia!`);
+            });
+            document.getElementById("listaZadanDziecko").appendChild(li);
+        });
+
+        // --- 3. LISTA NAGRÓD (Standardowa) ---
+        const listaNagrodKontener = document.getElementById("listaNagrodDziecko");
+        if(listaNagrodKontener) {
+            listaNagrodKontener.innerHTML = "";
+            bazaNagrod.forEach(n => {
+                // Jeśli nagroda jest celem, nie pokazujemy jej na liście zwykłych nagród żeby nie mylić
+                if(celSkarbonki && celSkarbonki.id === n.id) return;
+
+                const s = mojePunkty >= n.koszt;
+                const li = document.createElement("li");
+                li.innerHTML = `
+                    <div class="akcja-info">
+                        <span class="akcja-nazwa">${n.nazwa}</span>
+                        <span class="akcja-koszt">-${n.koszt} ⭐</span>
+                    </div>
+                    <button class="btn-kup" style="padding: 12px; border-radius:12px; ${s ? 'background-color: #ec4899;' : 'background-color: #cbd5e1; cursor: not-allowed;'}">
+                        ${s ? '🎁' : '🔒'}
+                    </button>`;
+                
+                li.querySelector('.btn-kup').addEventListener('click', () => {
+                    if (s) {
+                        mojePunkty -= n.koszt;
+                        aktualizujPortfel();
+                        renderujWidokDziecka();
+                        alert(`Wybrałeś: ${n.nazwa}!`);
+                    } else {
+                        alert("Za mało punktów!");
+                    }
+                });
+                listaNagrodKontener.appendChild(li);
+            });
+        }
+    }
+
+    // --- FUNKCJA KONFETTI (EFEKT WOW) ---
+    function uruchomKonfetti() {
+        for (let i = 0; i < 50; i++) {
+            const confetti = document.createElement('div');
+            confetti.innerText = ['🎉', '⭐', '🎈', '🍭'][Math.floor(Math.random() * 4)];
+            confetti.style.position = 'fixed';
+            confetti.style.left = Math.random() * 100 + 'vw';
+            confetti.style.top = '-5vh';
+            confetti.style.fontSize = (Math.random() * 20 + 10) + 'px';
+            confetti.style.zIndex = '9999';
+            confetti.style.pointerEvents = 'none';
+            confetti.animate([
+                { transform: `translateY(0) rotate(0deg)`, opacity: 1 },
+                { transform: `translateY(100vh) rotate(${Math.random() * 360}deg)`, opacity: 0 }
+            ], {
+                duration: Math.random() * 2000 + 1500,
+                easing: 'cubic-bezier(0.25, 1, 0.5, 1)'
+            });
+            document.body.appendChild(confetti);
+            setTimeout(() => confetti.remove(), 3500);
+        }
+    }
     document.getElementById("btnDodajZadanie").addEventListener("click", () => { const n = document.getElementById("noweZadanieNazwa").value.trim(); const p = parseInt(document.getElementById("noweZadaniePunkty").value); if(n&&p) { bazaZadan.push({id:Date.now(), nazwa:n, punkty:p}); zapiszWChmurze("gryZadania", bazaZadan); document.getElementById("noweZadanieNazwa").value=""; document.getElementById("noweZadaniePunkty").value=""; renderujZadania(); }});
     document.getElementById("btnDodajNagrode").addEventListener("click", () => { const n = document.getElementById("nowaNagrodaNazwa").value.trim(); const k = parseInt(document.getElementById("nowaNagrodaKoszt").value); if(n&&k) { bazaNagrod.push({id:Date.now(), nazwa:n, koszt:k}); zapiszWChmurze("gryNagrody", bazaNagrod); document.getElementById("nowaNagrodaNazwa").value=""; document.getElementById("nowaNagrodaKoszt").value=""; renderujNagrody(); }});
 
