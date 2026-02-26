@@ -73,7 +73,8 @@ document.addEventListener("DOMContentLoaded", function() {
     let mojePunkty = parseInt(localStorage.getItem("gryPunkty")) || 0; 
     let bazaZadan = JSON.parse(localStorage.getItem("gryZadania")) || [{ id: 1, nazwa: "Pościelenie łóżka", punkty: 10 }]; 
     let bazaNagrod = JSON.parse(localStorage.getItem("gryNagrody")) || [{ id: 1, nazwa: "30 min bajek", koszt: 50 }];
-    let celSkarbonki = JSON.parse(localStorage.getItem("gryCelSkarbonki")) || null; 
+    let celSkarbonki = JSON.parse(localStorage.getItem("gryCelSkarbonki")) || null;
+    let aktywneTimeryLekow = JSON.parse(localStorage.getItem("medTimery")) || {}; 
     let oczekujaceZadania = JSON.parse(localStorage.getItem("gryOczekujace")) || [];
     let bazaNotatek = JSON.parse(localStorage.getItem("narzedziaNotatki")) || [];
     let saldoFinansow = parseFloat(localStorage.getItem("grySaldo")) || 0.00; 
@@ -172,6 +173,7 @@ document.addEventListener("DOMContentLoaded", function() {
                     if (daneZChmury.gryZadania) bazaZadan = daneZChmury.gryZadania;
                     if (daneZChmury.gryNagrody) bazaNagrod = daneZChmury.gryNagrody;
                     if (daneZChmury.gryCelSkarbonki) celSkarbonki = daneZChmury.gryCelSkarbonki;
+                    if (daneZChmury.medTimery) aktywneTimeryLekow = daneZChmury.medTimery;
                     if (daneZChmury.gryHistoriaFinansow) historiaFinansow = daneZChmury.gryHistoriaFinansow;
                     if (daneZChmury.narzedziaNotatki) bazaNotatek = daneZChmury.narzedziaNotatki;
                     if (daneZChmury.narzedziaKalendarz) bazaKalendarz = daneZChmury.narzedziaKalendarz;
@@ -228,6 +230,7 @@ document.addEventListener("DOMContentLoaded", function() {
         updates['gryZadania'] = bazaZadan;
         updates['gryNagrody'] = bazaNagrod;
         updates['gryCelSkarbonki'] = celSkarbonki;
+        updates['medTimery'] = aktywneTimeryLekow;
         updates['grySaldo'] = saldoFinansow;
         updates['gryHistoriaFinansow'] = historiaFinansow;
         updates['narzedziaNotatki'] = bazaNotatek;
@@ -526,7 +529,28 @@ document.addEventListener("DOMContentLoaded", function() {
     function renderujKarmienie() { const lista = document.getElementById("listaKarmienie"); lista.innerHTML = ""; bazaKarmienie.forEach(k => { const li = document.createElement("li"); li.className = "notatka-element"; li.innerHTML = `<div class="notatka-tekst"><strong style="color:#ad1457;">${k.data} ${k.czas}</strong><br>${k.typ} ${k.ilosc ? `(${k.ilosc} ml)` : ''}</div><button class="btn-usun" style="margin-left: 10px;">🗑️</button>`; li.querySelector('.btn-usun').addEventListener('click', () => { bazaKarmienie = bazaKarmienie.filter(x => x.id !== k.id); zapiszWChmurze("narzedziaKarmienie", bazaKarmienie); renderujKarmienie(); }); lista.appendChild(li); }); }
     document.getElementById("btnDodajKarmienie").addEventListener("click", () => { const t = document.getElementById("noweKarmienieTyp").value; const i = document.getElementById("noweKarmienieIlosc").value; const d = document.getElementById("noweKarmienieData").value; const c = document.getElementById("noweKarmienieCzas").value; if(!d || !c) return; bazaKarmienie.unshift({ id: Date.now(), typ: t, ilosc: i, data: d, czas: c }); zapiszWChmurze("narzedziaKarmienie", bazaKarmienie); document.getElementById("noweKarmienieIlosc").value = ""; renderujKarmienie(); }); 
 
-    function renderujBilans() { const lista = document.getElementById("listaBilans"); lista.innerHTML = ""; bazaBilans.forEach(b => { const li = document.createElement("li"); li.className = "notatka-element"; li.innerHTML = `<div class="notatka-tekst"><strong style="color:#283593;">${b.data}</strong><br>Waga: ${b.waga} kg | Wzrost: ${b.wzrost} cm | Głowa: ${b.glowa} cm</div><button class="btn-usun" style="margin-left: 10px;">🗑️</button>`; li.querySelector('.btn-usun').addEventListener('click', () => { bazaBilans = bazaBilans.filter(x => x.id !== b.id); zapiszWChmurze("narzedziaBilans", bazaBilans); renderujBilans(); }); lista.appendChild(li); }); }
+    function renderujBilans() { 
+        const lista = document.getElementById("listaBilans"); 
+        lista.innerHTML = ""; 
+        
+        // 1. Renderowanie zwykłej listy (dla wszystkich)
+        bazaBilans.forEach(b => { 
+            const li = document.createElement("li"); 
+            li.className = "notatka-element"; 
+            li.innerHTML = `<div class="notatka-tekst"><strong style="color:#283593;">${b.data}</strong><br>Waga: ${b.waga} kg | Wzrost: ${b.wzrost} cm | Głowa: ${b.glowa} cm</div><button class="btn-usun" style="margin-left: 10px;">🗑️</button>`; 
+            li.querySelector('.btn-usun').addEventListener('click', () => { 
+                bazaBilans = bazaBilans.filter(x => x.id !== b.id); 
+                zapiszWChmurze("narzedziaBilans", bazaBilans); 
+                renderujBilans(); 
+            }); 
+            lista.appendChild(li); 
+        }); 
+
+        // 2. Rysowanie profesjonalnego wykresu nad listą
+        if (typeof rysujWykresRozwoju === "function") {
+            rysujWykresRozwoju();
+        }
+    }
     document.getElementById("btnDodajBilans").addEventListener("click", () => { const d = document.getElementById("nowyBilansData").value; const w = document.getElementById("nowyBilansWaga").value; const wz = document.getElementById("nowyBilansWzrost").value; const g = document.getElementById("nowyBilansGlowa").value; if(!d) return; bazaBilans.unshift({ id: Date.now(), data: d, waga: w||'-', wzrost: wz||'-', glowa: g||'-' }); zapiszWChmurze("narzedziaBilans", bazaBilans); if(w) { let p = bazaProfili.find(x => x.id == aktywnyProfilId); if(p) { p.waga = w; zapiszWChmurze("medBazaProfili", bazaProfili); renderujWybierakProfili(); } } document.getElementById("nowyBilansWaga").value = ""; document.getElementById("nowyBilansWzrost").value = ""; document.getElementById("nowyBilansGlowa").value = ""; renderujBilans(); }); 
 
     function renderujSzczepienia() { const lista = document.getElementById("listaSzczepien"); lista.innerHTML = ""; bazaSzczepien.forEach(s => { const li = document.createElement("li"); li.className = "notatka-element"; li.innerHTML = `<div class="notatka-tekst"><strong style="color:#00acc1;">${s.data}</strong><br>${s.nazwa}</div><button class="btn-usun" style="margin-left: 10px;">🗑️</button>`; li.querySelector('.btn-usun').addEventListener('click', () => { bazaSzczepien = bazaSzczepien.filter(x => x.id !== s.id); zapiszWChmurze("narzedziaSzczepienia", bazaSzczepien); renderujSzczepienia(); }); lista.appendChild(li); }); }
@@ -537,8 +561,38 @@ document.addEventListener("DOMContentLoaded", function() {
     typLekuSelect.addEventListener("change", (e) => { infoDawka.classList.add("ukryty"); if(e.target.value === "DodajNowy") { panelNowegoLeku.classList.remove("ukryty"); document.getElementById("btnKalkulator").classList.add("ukryty"); } else { panelNowegoLeku.classList.add("ukryty"); document.getElementById("btnKalkulator").classList.remove("ukryty"); } if(e.target.value === "Temperatura") { wartoscInput.placeholder = "Wynik °C"; document.getElementById("btnKalkulator").classList.add("ukryty"); } else { wartoscInput.placeholder = "Dawka (ml)"; } });
     document.getElementById("btnZapiszNowyLek").addEventListener("click", () => { const n = document.getElementById("nowaNazwaLeku").value.trim(); if(n){ mojaApteczka.push(n); zapiszWChmurze("medApteczka", mojaApteczka); odswiezLeki(); typLekuSelect.value = n; panelNowegoLeku.classList.add("ukryty"); } });
     function odswiezZdarzenia() { const l = document.getElementById("listaZdarzen"); l.innerHTML = ""; bazaZdarzen.forEach(z => { const li = document.createElement("li"); li.className = z.typ === "Temperatura" ? "wpis-temp" : "wpis-lek"; li.innerHTML = `<strong>${z.godzinaWyswietlana}</strong> - ${z.lek}: <strong>${z.dawka}</strong>`; l.appendChild(li); }); } 
-    document.getElementById("btnZapiszLek").addEventListener("click", () => { const t = typLekuSelect.value; const txt = typLekuSelect.options[typLekuSelect.selectedIndex].text; const w = wartoscInput.value; if(t!=="DodajNowy" && w) { const d = new Date(); bazaZdarzen.unshift({ typ: t, lek: txt, dawka: w, czasWpisu: d.getTime(), godzinaWyswietlana: d.getHours().toString().padStart(2,'0')+":"+d.getMinutes().toString().padStart(2,'0') }); zapiszWChmurze("medHistoria", bazaZdarzen); wartoscInput.value=""; infoDawka.classList.add("ukryty"); odswiezZdarzenia(); } });
-    document.getElementById("btnKalkulator").addEventListener("click", () => { const p = bazaProfili.find(x => x.id == aktywnyProfilId) || bazaProfili[0]; if(!p || !p.waga || p.waga <= 0) return alert("Brak wagi! Uzupełnij ją w 'Profilu' lub dodaj w 'Bilansie'."); const waga = parseFloat(p.waga); const typ = typLekuSelect.value; let dawka = 0; let opisStężenia = ""; if(typ === "Ibuprofen") { dawka = waga / 4; opisStężenia = "Syrop FORTE (40mg/ml). Podawać co 6-8h."; } else if (typ === "Paracetamol") { dawka = (waga * 15) / 24; opisStężenia = "Syrop (120mg/5ml). Podawać co 4-6h."; } else { return alert("Kalkulator działa tylko dla Ibuprofenu i Paracetamolu."); } const wynik = Math.round(dawka * 10) / 10; wartoscInput.value = wynik; infoDawka.innerHTML = `✨ Sugerowana <strong>JEDNORAZOWA</strong> dawka dla ${waga}kg:<br><span style="font-size: 20px; font-weight: 900; color: #1e40af; display: block; margin: 5px 0;">${wynik} ml</span><span style="font-size: 11px; color: #475569;">Ważne: ${opisStężenia}</span>`; infoDawka.classList.remove("ukryty"); });
+    document.getElementById("btnZapiszLek").addEventListener("click", () => { 
+        const t = typLekuSelect.value; const txt = typLekuSelect.options[typLekuSelect.selectedIndex].text; const w = wartoscInput.value; 
+        if(t!=="DodajNowy" && w) { 
+            const d = new Date(); 
+            bazaZdarzen.unshift({ typ: t, lek: txt, dawka: w, czasWpisu: d.getTime(), godzinaWyswietlana: d.getHours().toString().padStart(2,'0')+":"+d.getMinutes().toString().padStart(2,'0') }); 
+            zapiszWChmurze("medHistoria", bazaZdarzen); 
+            
+            // --- NOWOŚĆ: STRAŻNIK GORĄCZKI (TYLKO PREMIUM) ---
+            if (czyPremium && (t === "Ibuprofen" || t === "Paracetamol")) {
+                const czasOczekiwania = t === "Ibuprofen" ? 6 * 60 * 60 * 1000 : 4 * 60 * 60 * 1000;
+                aktywneTimeryLekow[t] = Date.now() + czasOczekiwania;
+                zapiszWChmurze("medTimery", aktywneTimeryLekow);
+                renderujStraznikaLekow();
+                alert(`🛡️ Strażnik aktywny! Aplikacja przypomni, gdy podanie kolejnej dawki ${t} będzie bezpieczne.`);
+            }
+            // --------------------------------------------------
+
+            wartoscInput.value=""; infoDawka.classList.add("ukryty"); odswiezZdarzenia(); 
+        } 
+    });
+
+    document.getElementById("btnKalkulator").addEventListener("click", () => { 
+        const p = bazaProfili.find(x => x.id == aktywnyProfilId) || bazaProfili[0]; 
+        if(!p || !p.waga || p.waga <= 0) return alert("Brak wagi! Uzupełnij ją w 'Profilu' lub dodaj w 'Bilansie'."); 
+        const waga = parseFloat(p.waga); const typ = typLekuSelect.value; let dawka = 0; let opisStężenia = ""; 
+        if(typ === "Ibuprofen") { dawka = waga / 4; opisStężenia = "Syrop FORTE (40mg/ml). Podawać co 6-8h."; } 
+        else if (typ === "Paracetamol") { dawka = (waga * 15) / 24; opisStężenia = "Syrop (120mg/5ml). Podawać co 4-6h."; } 
+        else { return alert("Kalkulator działa tylko dla Ibuprofenu i Paracetamolu."); } 
+        const wynik = Math.round(dawka * 10) / 10; wartoscInput.value = wynik; 
+        infoDawka.innerHTML = `✨ Sugerowana <strong>JEDNORAZOWA</strong> dawka dla ${waga}kg:<br><span style="font-size: 20px; font-weight: 900; color: #1e40af; display: block; margin: 5px 0;">${wynik} ml</span><span style="font-size: 11px; color: #475569;">Ważne: ${opisStężenia}</span>`; 
+        infoDawka.classList.remove("ukryty"); 
+    });
     document.getElementById("notatkiLekarz").value = localStorage.getItem("medNotatki") || ""; document.getElementById("notatkiLekarz").addEventListener("input", (e) => zapiszWChmurze("medNotatki", e.target.value));
     document.getElementById("btnWyczysc").addEventListener("click", () => { if(confirm("Wyczyścić historię leków?")){ usunZChmury("medHistoria"); bazaZdarzen=[]; document.getElementById("notatkiLekarz").value=""; odswiezZdarzenia(); }});
 
@@ -1017,7 +1071,170 @@ else if (czyWTekscieJest(zapytanie, ["dobranoc", "idę spać", "papa", "na razie
             zapiszWChmurze("narzedziaAsystent", bazaCzatu); renderujCzat();
         }, 1500); 
     });
+// --- MODUŁ WIZUALNY STRAŻNIKA GORĄCZKI ---
+    window.renderujStraznikaLekow = function() {
+        if (!czyPremium) return; // Strażnik to funkcja tylko dla Premium
+        
+        let kontener = document.getElementById("straznikLekowBaner");
+        if (!kontener) {
+            kontener = document.createElement("div");
+            kontener.id = "straznikLekowBaner";
+            const pulpit = document.getElementById("ekranStart");
+            // Wstawiamy na samą górę pulpitu (pod tytułem aplikacji)
+            pulpit.insertBefore(kontener, pulpit.firstChild);
+        }
 
+        let html = "";
+        const teraz = Date.now();
+        let aktywne = false;
+
+        for (const [lek, czasKoniec] of Object.entries(aktywneTimeryLekow)) {
+            if (czasKoniec > teraz) {
+                aktywne = true;
+                const resztaMs = czasKoniec - teraz;
+                const godz = Math.floor(resztaMs / (1000 * 60 * 60));
+                const min = Math.floor((resztaMs % (1000 * 60 * 60)) / (1000 * 60));
+                
+                // ZMIANA: Dodano position:relative do kontenera i przycisk ✖ w prawym górnym rogu
+                html += `
+                <div style="position: relative; background: #fee2e2; border: 2px solid #ef4444; border-radius: 12px; padding: 15px; margin: 15px 20px; color: #991b1b; text-align: center; box-shadow: 0 4px 6px rgba(239, 68, 68, 0.2);">
+                    <button onclick="if(confirm('Czy na pewno chcesz przerwać odliczanie dla leku: ${lek}?')) usunZChmuryLek('${lek}')" style="position: absolute; top: 10px; right: 15px; background: none; border: none; font-size: 18px; font-weight: bold; cursor: pointer; color: #ef4444; padding: 5px;">✖</button>
+                    <div style="font-size: 20px; margin-bottom: 5px;">🚨 <strong>Strażnik Gorączki</strong> 🚨</div>
+                    Następny bezpieczny <strong style="color:#b91c1c;">${lek}</strong> najwcześniej za:<br>
+                    <span style="font-size: 24px; font-weight: 900; display: block; margin-top: 5px;">⏳ ${godz}h ${min}m</span>
+                </div>`;
+            } else if (czasKoniec > 0 && czasKoniec <= teraz) {
+                 html += `
+                 <div style="background: #d1fae5; border: 2px solid #10b981; border-radius: 12px; padding: 15px; margin: 15px 20px; color: #065f46; text-align: center; box-shadow: 0 4px 6px rgba(16, 185, 129, 0.2);">
+                    <div style="font-size: 20px; margin-bottom: 5px;">✅ <strong>Gotowe!</strong></div>
+                    Możesz już bezpiecznie podać <strong style="color:#047857;">${lek}</strong>!
+                    <button onclick="usunZChmuryLek('${lek}')" style="display: block; width: 100%; margin-top: 10px; background: #10b981; color: white; border: none; padding: 10px; border-radius: 8px; font-weight: bold; cursor: pointer;">Zrozumiałem, ukryj komunikat</button>
+                </div>`;
+                aktywne = true;
+            }
+        }
+        kontener.innerHTML = html;
+        if (!aktywne) kontener.innerHTML = "";
+    }
+
+    // Funkcja do usuwania timera po jego zakończeniu
+    window.usunZChmuryLek = function(lek) {
+        delete aktywneTimeryLekow[lek];
+        zapiszWChmurze("medTimery", aktywneTimeryLekow);
+        renderujStraznikaLekow();
+    }
+
+    // Uruchomienie strażnika przy starcie i odświeżanie go co minutę
+    setInterval(renderujStraznikaLekow, 60000);
+    setTimeout(renderujStraznikaLekow, 1000); // Pierwsze wywołanie po 1 sekundzie
+    // ==========================================
+    // MODUŁ WIZUALNY: WYKRESY ROZWOJU DZIECKA (PREMIUM)
+    // ==========================================
+    let bilansChartInstancja = null;
+
+    window.rysujWykresRozwoju = function() {
+        const kontenerListy = document.getElementById("listaBilans");
+        if (!kontenerListy) return;
+
+        // Szukamy lub tworzymy kontener na wykres
+        let kontenerWykresu = document.getElementById("kontenerWykresuBilans");
+        if (!kontenerWykresu) {
+            kontenerWykresu = document.createElement("div");
+            kontenerWykresu.id = "kontenerWykresuBilans";
+            kontenerWykresu.style = "position: relative; margin-bottom: 20px; padding: 15px; background: #fff; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; min-height: 200px;";
+            // Wstawiamy go tuż nad listą pomiarów
+            kontenerListy.parentNode.insertBefore(kontenerWykresu, kontenerListy);
+        }
+
+        // Jeśli brak danych, pokazujemy komunikat
+        if (bazaBilans.length === 0) {
+            kontenerWykresu.innerHTML = `<div style="text-align:center; color:#64748b; padding: 20px;">Dodaj minimum jeden pomiar, aby zobaczyć wykres. 📈</div>`;
+            return;
+        }
+
+        // --- BLOKADA PREMIUM ---
+        if (!czyPremium) {
+            kontenerWykresu.innerHTML = `
+            <div style="filter: blur(4px); opacity: 0.4; pointer-events: none;">
+                <div style="height: 180px; background: linear-gradient(90deg, #e0e7ff, #ede9fe); border-radius: 8px;"></div>
+            </div>
+            <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; z-index: 10; width: 80%;">
+                <div style="font-size: 35px; margin-bottom: 10px;">👑</div>
+                <strong style="color: #1e293b; background: white; padding: 8px 15px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); display: inline-block;">Wykresy Rozwoju w Premium</strong>
+                <button onclick="document.getElementById('banerPremiumPulpit').click()" style="margin-top: 15px; background: #8b5cf6; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; width: 100%;">Odblokuj</button>
+            </div>`;
+            return;
+        }
+
+        // Tworzymy płótno (canvas) dla biblioteki Chart.js
+        kontenerWykresu.innerHTML = '<canvas id="canvasWykresRozwoju"></canvas>';
+
+        // Funkcja ładująca Chart.js i rysująca wykres
+        const stworzWykres = () => {
+            const ctx = document.getElementById("canvasWykresRozwoju").getContext("2d");
+            
+            // Sortowanie od najstarszego do najnowszego wpisu
+            const posortowane = [...bazaBilans].sort((a, b) => new Date(a.data) - new Date(b.data));
+            const etykiety = posortowane.map(b => b.data.substring(5)); // Skraca datę np. 2026-05-12 do 05-12
+            const wagi = posortowane.map(b => parseFloat(b.waga) || null);
+            const wzrosty = posortowane.map(b => parseFloat(b.wzrost) || null);
+
+            if (bilansChartInstancja) bilansChartInstancja.destroy();
+
+            bilansChartInstancja = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: etykiety,
+                    datasets: [
+                        {
+                            label: 'Waga (kg)',
+                            data: wagi,
+                            borderColor: '#3b82f6',
+                            backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                            yAxisID: 'y',
+                            tension: 0.4,
+                            fill: true,
+                            borderWidth: 3,
+                            pointRadius: 4
+                        },
+                        {
+                            label: 'Wzrost (cm)',
+                            data: wzrosty,
+                            borderColor: '#10b981',
+                            backgroundColor: 'rgba(16, 185, 129, 0.2)',
+                            yAxisID: 'y1',
+                            tension: 0.4,
+                            fill: false,
+                            borderWidth: 3,
+                            pointRadius: 4
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    interaction: { mode: 'index', intersect: false },
+                    scales: {
+                        y: { type: 'linear', display: true, position: 'left', title: { display: true, text: 'Waga' } },
+                        y1: { type: 'linear', display: true, position: 'right', title: { display: true, text: 'Wzrost' }, grid: { drawOnChartArea: false } }
+                    }
+                }
+            });
+        };
+
+        // Sprawdzamy, czy biblioteka Chart.js jest już załadowana. Jeśli nie - pobieramy ją.
+        if (window.Chart) {
+            stworzWykres();
+        } else {
+            kontenerWykresu.innerHTML = `<div style="text-align:center; padding: 20px; color:#64748b;">⏳ Rysowanie wykresu...</div>`;
+            const script = document.createElement('script');
+            script.src = "https://cdn.jsdelivr.net/npm/chart.js";
+            script.onload = () => {
+                kontenerWykresu.innerHTML = '<canvas id="canvasWykresRozwoju"></canvas>';
+                stworzWykres();
+            };
+            document.head.appendChild(script);
+        }
+    };
     // ZAINICJOWANIE WIDOKÓW STARTOWYCH (Dla offline'u zanim Firebase odpowie)
     odswiezWszystkieWidoki();
 });
