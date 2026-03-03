@@ -264,6 +264,44 @@ document.addEventListener("DOMContentLoaded", function() {
         auth.signInWithEmailAndPassword(email, pass).catch(error => { alert("Błąd logowania. Sprawdź e-mail i hasło."); });
     });
 
+    // --- LOGOWANIE PRZEZ GOOGLE ---
+const btnZalogujGoogle = document.getElementById('btnZalogujGoogle');
+
+if (btnZalogujGoogle) {
+    btnZalogujGoogle.addEventListener('click', () => {
+        // Sprawdzenie, czy checkbox z regulaminem jest zaznaczony
+        const zgoda = document.getElementById('zgodaRejestracja');
+        if (zgoda && !zgoda.checked) {
+            alert("Aby się zalogować, musisz zaakceptować Regulamin i Politykę Prywatności.");
+            return;
+        }
+
+        // Konfiguracja dostawcy logowania Google
+        const provider = new firebase.auth.GoogleAuthProvider();
+        
+        // Opcjonalnie: Wymuszenie języka polskiego w okienku logowania Google
+        firebase.auth().languageCode = 'pl';
+
+        // Wywołanie okienka pop-up do logowania
+        firebase.auth().signInWithPopup(provider)
+            .then((result) => {
+                // Sukces!
+                const user = result.user;
+                console.log("Zalogowano pomyślnie przez Google jako:", user.email);
+                
+                // Twój główny listener (np. firebase.auth().onAuthStateChanged) 
+                // automatycznie wyłapie zmianę i przekieruje użytkownika na Pulpit.
+            })
+            .catch((error) => {
+                // Obsługa błędów (np. gdy użytkownik zamknie okienko logowania)
+                console.error("Błąd logowania Google:", error.code, error.message);
+                if (error.code !== 'auth/popup-closed-by-user') {
+                    alert("Wystąpił błąd podczas logowania przez Google: " + error.message);
+                }
+            });
+    });
+}
+
     document.getElementById("btnZarejestruj").addEventListener("click", () => {
         const email = document.getElementById("loginEmail").value.trim(); const pass = document.getElementById("loginHaslo").value.trim();
         if(!email || !pass) return alert("Podaj adres e-mail i hasło do rejestracji!");
