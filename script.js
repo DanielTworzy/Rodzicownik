@@ -1472,14 +1472,30 @@ const inputBLW = document.getElementById('inputWyszukiwarkaBLW');
 const kontenerWynikowBLW = document.getElementById('listaWynikowBLW');
 
 if (inputBLW && kontenerWynikowBLW) {
-    // Na starcie pokazujemy całą listę lub wybrane produkty
-    renderujProduktyBLW(bazaBLW);
+    // SUPER ZMIANA: Na starcie NIE renderujemy niczego, tylko wyświetlamy zachętę
+    kontenerWynikowBLW.innerHTML = `
+        <div style="text-align: center; color: #64748b; padding: 30px 10px; font-size: 14px; background: #f8fafc; border-radius: 8px; border: 1px dashed #cbd5e1;">
+            <div style="font-size: 24px; margin-bottom: 10px;">👇</div>
+            Wpisz nazwę produktu w pasku wyszukiwania powyżej, aby sprawdzić zalecenia (np. jajko, miód, truskawki).
+        </div>
+    `;
 
     // Nasłuchujemy każdego wpisanego znaku
     inputBLW.addEventListener('input', (e) => {
         const szukanaFraza = e.target.value.toLowerCase().trim();
         
-        // Filtrujemy bazę
+        // Jeśli użytkownik skasuje tekst i pole będzie puste - wracamy do ekranu początkowego
+        if (szukanaFraza.length === 0) {
+            kontenerWynikowBLW.innerHTML = `
+                <div style="text-align: center; color: #64748b; padding: 30px 10px; font-size: 14px; background: #f8fafc; border-radius: 8px; border: 1px dashed #cbd5e1;">
+                    <div style="font-size: 24px; margin-bottom: 10px;">👇</div>
+                    Wpisz nazwę produktu w pasku wyszukiwania powyżej, aby sprawdzić zalecenia (np. jajko, miód, truskawki).
+                </div>
+            `;
+            return;
+        }
+
+        // Filtrujemy bazę tylko po wpisaniu tekstu
         const przefiltrowane = bazaBLW.filter(produkt => 
             produkt.nazwa.toLowerCase().includes(szukanaFraza)
         );
