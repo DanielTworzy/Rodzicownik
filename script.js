@@ -1273,6 +1273,369 @@ else if (czyWTekscieJest(zapytanie, ["dobranoc", "idę spać", "papa", "na razie
             document.head.appendChild(script);
         }
     };
+
+    // --- MODUŁ: RADAR SKOKÓW ROZWOJOWYCH ---
+
+// 1. Baza danych skoków (tygodnie liczone od daty porodu)
+const bazaSkokow = [
+    { start: 4, koniec: 5, nazwa: "Skok 1: Wrażenia", objawy: "Płaczliwość, gorszy sen, potrzeba ciągłego tulenia.", umiejetnosci: "Dłużej patrzy na obiekty, pierwsze uśmiechy, jest bardziej świadome dotyku." },
+    { start: 7, koniec: 9, nazwa: "Skok 2: Wzory", objawy: "Marudność, trudności z zasypianiem, utrata apetytu.", umiejetnosci: "Podnosi głowę, odkrywa swoje ręce i nogi, zauważa powtarzalne wzory." },
+    { start: 11, koniec: 12, nazwa: "Skok 3: Niuanse", objawy: "Niepokój, głośniejsze zachowanie (piski), odpychanie.", umiejetnosci: "Płynniejsze ruchy, śledzenie wzrokiem (kręci głową), głużenie." },
+    { start: 14, koniec: 19, nazwa: "Skok 4: Wydarzenia (Najdłuższy!)", objawy: "Regresja snu, duża frustracja, częste pobudki.", umiejetnosci: "Łączenie faktów (wyciąga ręce po zabawkę), reaguje na swoje imię, przekręca się na brzuch." },
+    { start: 22, koniec: 26, nazwa: "Skok 5: Relacje", objawy: "Lęk separacyjny (płacz gdy mama znika), gorszy apetyt.", umiejetnosci: "Rozumie odległość (rzuca przedmiotami i patrzy jak spadają), zaczyna pełzać/siadać." },
+    { start: 33, koniec: 37, nazwa: "Skok 6: Kategorie", objawy: "Zmienność nastrojów, chęć bycia tylko na rękach.", umiejetnosci: "Dzieli rzeczy na grupy (np. wie, co to 'pies'), celowo naśladuje gesty, rozumie nazwy przedmiotów." },
+    { start: 41, koniec: 46, nazwa: "Skok 7: Sekwencje", objawy: "Zazdrość, napady złości, bunt przy ubieraniu.", umiejetnosci: "Rozumie kolejność (buduje wieżę, szuka schowanej zabawki), próbuje samo jeść łyżeczką." },
+    { start: 50, koniec: 54, nazwa: "Skok 8: Programy", objawy: "Płacz z frustracji, koszmary senne, bywa zaborcze.", umiejetnosci: "Odkrywa, że czynności to proces (np. bierze kurtkę, bo wie, że czas na spacer), pierwsze kroki." },
+    { start: 59, koniec: 61, nazwa: "Skok 9: Zasady", objawy: "Wymuszanie płaczem, testowanie granic cierpliwości rodzica.", umiejetnosci: "Początki negocjacji, naśladuje domowe obowiązki (sprzątanie), używa słowa 'NIE'." },
+    { start: 70, koniec: 75, nazwa: "Skok 10: Systemy", objawy: "Apatia na przemian z agresją, bardzo silny bunt dwulatka.", umiejetnosci: "Zrozumienie, że można wybierać zachowanie zależnie od sytuacji, budowanie własnego 'Ja', świadomość bycia odrębną osobą." }
+];
+
+const inputDataPorodu = document.getElementById('dataPoroduSkoki');
+
+if (inputDataPorodu) {
+    // 2. Pobieranie daty: Najpierw z Firebase, a jak chmura ładuje się wolniej, to z pamięci urządzenia
+    let zapisanaData = '';
+    
+    if (typeof daneZChmury !== 'undefined' && daneZChmury.dataPorodu) {
+        zapisanaData = daneZChmury.dataPorodu;
+    } else {
+        zapisanaData = localStorage.getItem('skokiDataPorodu');
+    }
+
+    // Jeśli data już istnieje w systemie, od razu pokazujemy wyniki
+    if (zapisanaData) {
+        inputDataPorodu.value = zapisanaData;
+        obliczSkoki(zapisanaData);
+    }
+
+    // 3. Nasłuchujemy zmian - co się dzieje, gdy rodzic wybierze datę w kalendarzu
+    inputDataPorodu.addEventListener('change', (e) => {
+        const wybranaData = e.target.value;
+        
+        // Zapisujemy lokalnie (szybkie działanie offline)
+        localStorage.setItem('skokiDataPorodu', wybranaData);
+        
+        // Zapisujemy do Firebase (Twoja dedykowana funkcja)
+        if (typeof zapiszWChmurze === 'function') {
+            zapiszWChmurze("dataPorodu", wybranaData);
+            console.log("Zapisano datę porodu w Firebase: ", wybranaData);
+        }
+        
+        // Obliczamy i rysujemy nowy stan
+        obliczSkoki(wybranaData);
+    });
+}
+
+function obliczSkoki(dataPoroduStr) {
+    if (!dataPoroduStr) return;
+
+    const dataPorodu = new Date(dataPoroduStr);
+    const dzisiaj = new Date();
+    
+    // Oblicz różnicę w czasie (w milisekundach), a potem zamień na tygodnie
+    const roznicaCzasu = dzisiaj.getTime() - dataPorodu.getTime();
+    const aktualnyTydzien = Math.floor(roznicaCzasu / (1000 * 3600 * 24 * 7));
+
+    renderujInterfejsSkokow(aktualnyTydzien);
+}
+
+function renderujInterfejsSkokow(aktualnyTydzien) {
+    const statusDiv = document.getElementById('statusSkoku');
+    const listaDiv = document.getElementById('listaSkokow');
+    
+    if (!statusDiv || !listaDiv) return;
+    
+    statusDiv.style.display = 'block';
+    listaDiv.innerHTML = '';
+
+    let czyWTrakcieSkoku = false;
+    let aktualnySkok = null;
+
+    // Generowanie głównego powiadomienia (Baner)
+    if (aktualnyTydzien < 0) {
+        statusDiv.style.backgroundColor = '#f1f5f9';
+        statusDiv.innerHTML = `<strong>Dziecko jeszcze w brzuszku! 🤰</strong><br><span style="font-size: 12px;">Wróć tu po narodzinach.</span>`;
+    } else {
+        // Szukamy, czy dziecko jest akurat w oknie któregoś skoku
+        for (let skok of bazaSkokow) {
+            if (aktualnyTydzien >= skok.start && aktualnyTydzien <= skok.koniec) {
+                czyWTrakcieSkoku = true;
+                aktualnySkok = skok;
+                break;
+            }
+        }
+
+        if (czyWTrakcieSkoku) {
+            statusDiv.style.backgroundColor = '#fee2e2'; // Czerwony/Ostrzegawczy
+            statusDiv.style.color = '#991b1b';
+            statusDiv.innerHTML = `<div style="font-size: 24px; margin-bottom: 5px;">⛈️</div>
+                                   <strong>Trwa ${aktualnySkok.nazwa}</strong><br>
+                                   <span style="font-size: 12px;">Aktualny tydzień życia: ${aktualnyTydzien}. Możesz spodziewać się marudzenia!</span>`;
+        } else {
+            statusDiv.style.backgroundColor = '#dcfce7'; // Zielony/Spokojny
+            statusDiv.style.color = '#166534';
+            statusDiv.innerHTML = `<div style="font-size: 24px; margin-bottom: 5px;">☀️</div>
+                                   <strong>Słoneczny czas!</strong><br>
+                                   <span style="font-size: 12px;">Aktualny tydzień życia: ${aktualnyTydzien}. Mózg dziecka utrwala nowe umiejętności.</span>`;
+        }
+    }
+
+    // Generowanie pełnej listy etapów pod banerem
+    bazaSkokow.forEach(skok => {
+        let kolorTla = '#ffffff';
+        let kolorTekstu = '#1e293b';
+        let ikona = '⏳'; // Ikona dla przyszłych skoków
+
+        if (aktualnyTydzien > skok.koniec) {
+            kolorTla = '#f8fafc'; // Szare tło (Skok już za nami)
+            kolorTekstu = '#94a3b8';
+            ikona = '✅';
+        } else if (aktualnyTydzien >= skok.start && aktualnyTydzien <= skok.koniec) {
+            kolorTla = '#fee2e2'; // Czerwone tło (Skok trwa teraz)
+            kolorTekstu = '#991b1b';
+            ikona = '⚡';
+        }
+
+        const element = document.createElement('div');
+        element.style.padding = '12px';
+        element.style.borderRadius = '8px';
+        element.style.border = '1px solid #e2e8f0';
+        element.style.backgroundColor = kolorTla;
+        element.style.color = kolorTekstu;
+
+        element.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: center; font-weight: bold; font-size: 14px; margin-bottom: 5px;">
+                <span>${ikona} ${skok.nazwa}</span>
+                <span style="font-size: 11px;">Tydzień ${skok.start}-${skok.koniec}</span>
+            </div>
+            <div style="font-size: 11px; margin-bottom: 4px;"><strong>Objawy:</strong> ${skok.objawy}</div>
+            <div style="font-size: 11px;"><strong>Co nowego:</strong> ${skok.umiejetnosci}</div>
+        `;
+        listaDiv.appendChild(element);
+    });
+}
+
+// 1. Potężna baza produktów BLW (ponad 30 produktów z zaleceniami)
+const bazaBLW = [
+    // --- WARZYWA ---
+    { nazwa: "Marchewka", status: "bezpieczne", wiek: "Od 6. miesiąca", opis: "Gotowana na parze (krojona w słupki). Surowa jest bardzo twarda - ogromne ryzyko zadławienia!" },
+    { nazwa: "Ziemniak", status: "bezpieczne", wiek: "Od 6. miesiąca", opis: "Ugotowany do miękkości, podawany w formie purée lub wygodnych słupków do rączki." },
+    { nazwa: "Bataty", status: "bezpieczne", wiek: "Od 6. miesiąca", opis: "Słodkie i miękkie po upieczeniu. Idealne na pierwsze 'frytki' z piekarnika dla malucha." },
+    { nazwa: "Brokuł", status: "bezpieczne", wiek: "Od 6. miesiąca", opis: "Idealny do rączki (tzw. różyczki z ogonkiem jako rączką). Gotuj na parze do miękkości." },
+    { nazwa: "Cukinia", status: "bezpieczne", wiek: "Od 6. miesiąca", opis: "Gotowana na parze w słupkach lub plastrach. Na początku warto obrać ze skórki." },
+    { nazwa: "Pomidor", status: "bezpieczne", wiek: "Od 6. miesiąca", opis: "Uwaga: kwas może podrażniać skórę wokół ust (to nie zawsze alergia). Zwykłe pomidory obierz ze skóry." },
+    { nazwa: "Pomidorki koktajlowe (w całości)", status: "zakazane", wiek: "Po 4. roku życia", opis: "Ogromne ryzyko zadławienia! Niemowlakom ZAWSZE krój je na ćwiartki (wzdłuż, nigdy w poprzek!)." },
+
+    // --- OWOCE ---
+    { nazwa: "Jabłko", status: "bezpieczne", wiek: "Od 6. miesiąca", opis: "Na początek gotowane na parze lub w formie musu. Surowe tylko starte na tarce lub w bardzo cienkich plasterkach." },
+    { nazwa: "Banan", status: "bezpieczne", wiek: "Od 6. miesiąca", opis: "Idealny na początek. Możesz podać zgnieciony widelcem lub w połówce (jeśli dziecko stabilnie siedzi)." },
+    { nazwa: "Gruszka", status: "bezpieczne", wiek: "Od 6. miesiąca", opis: "Wybieraj bardzo dojrzałe, miękkie i soczyste. Twarde odmiany koniecznie ugotuj na parze." },
+    { nazwa: "Awokado", status: "bezpieczne", wiek: "Od 6. miesiąca", opis: "Super zdrowe tłuszcze! Podawaj miękkie paski. Ponieważ jest śliskie, możesz obtoczyć je w zmielonym lnie lub amarantusie." },
+    { nazwa: "Maliny / Jeżyny", status: "bezpieczne", wiek: "Od 6. miesiąca", opis: "Podawaj lekko rozgniecione palcami, aby uniknąć zakrztuszenia. Uważaj na plamy!" },
+    { nazwa: "Borówki / Jagody (w całości)", status: "zakazane", wiek: "Po 4. roku życia", opis: "Okrągły kształt to ryzyko zadławienia. Zawsze krój je na pół lub na ćwiartki wzdłuż osi, ewentualnie rozgnieć." },
+    { nazwa: "Winogrona (w całości)", status: "zakazane", wiek: "Po 4. roku życia", opis: "Najczęstsza przyczyna zadławień! Zawsze krój wzdłuż na ćwiartki i wyciągaj pestki." },
+    { nazwa: "Cytrusy (Pomarańcza, Mandarynka)", status: "alergen", wiek: "Od 6. miesiąca", opis: "Mogą uczulać i powodować wysypkę kontaktową. Podawaj sam miąższ, wycinając twarde błonki." },
+    { nazwa: "Truskawki", status: "alergen", wiek: "Od 6. miesiąca", opis: "Częsty alergen (powoduje wysypkę uwalniając histaminę). Podawaj pokrojone na ćwiartki lub połówki." },
+
+    // --- BIAŁKO, MIĘSO, RYBY ---
+    { nazwa: "Jajko", status: "alergen", wiek: "Od 6. miesiąca", opis: "Silny alergen. Musi być dobrze ugotowane (ścinamy białko i żółtko). Zaczynaj od małych ilości, np. 1/4 jajka." },
+    { nazwa: "Jajko surowe / na miękko", status: "zakazane", wiek: "Po 1. roku życia", opis: "Zbyt duże ryzyko zakażenia pałeczkami Salmonelli przy niedojrzałym układzie pokarmowym." },
+    { nazwa: "Kurczak / Indyk", status: "bezpieczne", wiek: "Od 6. miesiąca", opis: "Ugotowany lub upieczony. Możesz poszarpać na włókna wzdłuż mięśnia lub zrobić miękkie pulpeciki." },
+    { nazwa: "Łosoś / Dorsz (Ryby)", status: "alergen", wiek: "Od 6. miesiąca", opis: "Alergen. Bardzo zdrowe kwasy Omega-3. Podawaj ugotowane na parze. BARDZO uważnie sprawdzaj ości!" },
+    { nazwa: "Mięso surowe / Tatar", status: "zakazane", wiek: "Jak najpóźniej", opis: "Ogromne ryzyko zakażenia groźnymi bakteriami (Salmonella, Listeria, E. coli)." },
+
+    // --- ZBÓŻA I WĘGLOWODANY ---
+    { nazwa: "Makaron", status: "alergen", wiek: "Od 6. miesiąca", opis: "Zawiera gluten (alergen). Wybieraj duże kształty (świderki, rurki), które łatwo złapać w pięść." },
+    { nazwa: "Kasza manna", status: "alergen", wiek: "Od 6. miesiąca", opis: "Zawiera gluten. Można ugotować bardzo gęstą i pokroić w kostkę do rączki." },
+    { nazwa: "Płatki owsiane", status: "bezpieczne", wiek: "Od 6. miesiąca", opis: "Świetne na owsianki lub zblendowane jako mąka do placuszków. Bogate w żelazo." },
+
+    // --- NABIAŁ ---
+    { nazwa: "Jogurt naturalny / Kefir", status: "alergen", wiek: "Od 6. miesiąca", opis: "Alergen (Białka Mleka Krowiego). Można podawać jako dodatek do posiłków, ale nie jako główny napój. Tylko bez cukru!" },
+    { nazwa: "Twaróg / Ser biały", status: "alergen", wiek: "Od 6. miesiąca", opis: "Alergen. Bardzo bogaty w białko. Podawać z umiarem, by nie przeciążać nerek niemowlaka." },
+    { nazwa: "Mleko krowie (do picia)", status: "zakazane", wiek: "Po 12. miesiącu", opis: "Jako napój - po roczku (obciąża nerki, mało żelaza). Można używać małych ilości do smażenia placuszków." },
+
+    // --- INNE, TŁUSZCZE, DODATKI ---
+    { nazwa: "Masło", status: "alergen", wiek: "Od 6. miesiąca", opis: "Alergen (BMK). Wybieraj prawdziwe masło (82% tłuszczu). Świetny dodatek do warzyw." },
+    { nazwa: "Oliwa z oliwek", status: "bezpieczne", wiek: "Od 6. miesiąca", opis: "Idealny tłuszcz dla niemowląt. Dodawaj łyżeczkę do zupy lub warzyw, wspomaga wchłanianie witamin." },
+    { nazwa: "Masło orzechowe (z fistaszków)", status: "alergen", wiek: "Od 6. miesiąca", opis: "Silny alergen, ale ZALECA SIĘ wczesne wprowadzanie. Wybieraj 100% orzechów. Rozsmaruj cieniutko na placku." },
+    { nazwa: "Orzechy (w całości)", status: "zakazane", wiek: "Po 4-5. roku życia", opis: "Gigantyczne ryzyko zadławienia! Niemowlakom podajemy wyłącznie w formie gładkiej pasty/masła." },
+    { nazwa: "Woda", status: "bezpieczne", wiek: "Od 6. miesiąca", opis: "Jedyny zalecany napój do posiłków. Podawaj wodę źródlaną w otwartym kubeczku lub bidonie z rurką." },
+    { nazwa: "Soki owocowe", status: "zakazane", wiek: "Po 12. miesiącu", opis: "Niemowlęta nie potrzebują soków. To sam cukier bez błonnika. Podawaj wodę i owoce w całości." },
+    { nazwa: "Miód", status: "zakazane", wiek: "Bezwzględnie po 12. miesiącu!", opis: "Może zawierać przetrwalniki bakterii wywołujących botulizm (jad kiełbasiany), co grozi paraliżem u niemowląt!" },
+    { nazwa: "Sól i Cukier", status: "zakazane", wiek: "Jak najpóźniej", opis: "Sól niszczy nerki niemowlęcia. Cukier uzależnia i psuje zęby. Nie dosalaj i nie dosładzaj!" },
+    { nazwa: "Grzyby leśne", status: "zakazane", wiek: "Po 12. roku życia", opis: "Zbyt ciężkostrawne i zawsze istnieje ryzyko zatrucia śmiertelnymi toksynami. Pieczarki hodowlane można po roczku." },
+    { nazwa: "Napój ryżowy (mleko ryżowe)", status: "zakazane", wiek: "Po 5. roku życia", opis: "Ryż kumuluje arsen. W formie płynnej jest niebezpieczny dla układu nerwowego małych dzieci." },
+    { nazwa: "Parówki", status: "zakazane", wiek: "Po 12. miesiącu", opis: "Są wysoko przetworzone i bardzo słone. Krążki z parówki to silne ryzyko zadławienia (krój wzdłuż na paski!)." }
+];
+
+const inputBLW = document.getElementById('inputWyszukiwarkaBLW');
+const kontenerWynikowBLW = document.getElementById('listaWynikowBLW');
+
+if (inputBLW && kontenerWynikowBLW) {
+    // Na starcie pokazujemy całą listę lub wybrane produkty
+    renderujProduktyBLW(bazaBLW);
+
+    // Nasłuchujemy każdego wpisanego znaku
+    inputBLW.addEventListener('input', (e) => {
+        const szukanaFraza = e.target.value.toLowerCase().trim();
+        
+        // Filtrujemy bazę
+        const przefiltrowane = bazaBLW.filter(produkt => 
+            produkt.nazwa.toLowerCase().includes(szukanaFraza)
+        );
+
+        renderujProduktyBLW(przefiltrowane);
+    });
+}
+
+function renderujProduktyBLW(produkty) {
+    kontenerWynikowBLW.innerHTML = ''; // Czyścimy wyniki
+
+    if (produkty.length === 0) {
+        kontenerWynikowBLW.innerHTML = `<div style="text-align: center; color: #94a3b8; padding: 20px; font-size: 13px;">Brak produktu w bazie. Jeśli masz wątpliwości, skonsultuj się z pediatrą.</div>`;
+        return;
+    }
+
+    produkty.forEach(produkt => {
+        let kolorTla = '#ffffff';
+        let kolorRamki = '#e2e8f0';
+        let kolorTytulu = '#1e293b';
+        let ikona = '🍽️';
+
+        // Kolorowanie w zależności od statusu bezpieczeństwa
+        if (produkt.status === 'zakazane') {
+            kolorTla = '#fef2f2'; // Jasnoczerwony
+            kolorRamki = '#fca5a5';
+            kolorTytulu = '#b91c1c';
+            ikona = '🛑';
+        } else if (produkt.status === 'alergen') {
+            kolorTla = '#fff7ed'; // Jasnopomarańczowy
+            kolorRamki = '#fdba74';
+            kolorTytulu = '#c2410c';
+            ikona = '⚠️';
+        } else {
+            kolorTla = '#f0fdf4'; // Jasnozielony
+            kolorRamki = '#86efac';
+            kolorTytulu = '#15803d';
+            ikona = '✅';
+        }
+
+        const element = document.createElement('div');
+        element.style.padding = '12px';
+        element.style.borderRadius = '8px';
+        element.style.border = `1px solid ${kolorRamki}`;
+        element.style.backgroundColor = kolorTla;
+
+        element.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 5px;">
+                <span style="font-weight: bold; font-size: 15px; color: ${kolorTytulu};">${ikona} ${produkt.nazwa}</span>
+                <span style="font-size: 10px; font-weight: bold; background: white; padding: 2px 6px; border-radius: 4px; border: 1px solid ${kolorRamki};">${produkt.wiek}</span>
+            </div>
+            <div style="font-size: 12px; color: #475569; line-height: 1.4;">${produkt.opis}</div>
+        `;
+        
+        kontenerWynikowBLW.appendChild(element);
+    });
+}
+
+    // --- MODUŁ: TRYB USYPIANIA (BIAŁY SZUM) ---
+
+const odtwarzacz = document.getElementById('odtwarzaczSzumow');
+const btnPlayPauseSzum = document.getElementById('btnPlayPauseSzum');
+let timerTimeout = null;
+
+// Baza darmowych, niezawodnych dźwięków (serwery Wikipedii)
+const dzwieki = {
+    'suszarka': 'https://upload.wikimedia.org/wikipedia/commons/d/d9/White_noise.ogg', // Biały szum
+    'deszcz': 'https://upload.wikimedia.org/wikipedia/commons/1/1a/Rain_falling_on_a_tin_roof.ogg', // Deszcz
+    'serce': 'https://upload.wikimedia.org/wikipedia/commons/8/87/Heartbeat.ogg' // Bicie serca
+};
+
+function zmienDzwiek(idDzwieku, kliknietyPrzycisk) {
+    if (!odtwarzacz) return;
+
+    // Resetuj kolory przycisków wszystkich szumów (na niebieski)
+    document.querySelectorAll('.btn-szum').forEach(btn => {
+        btn.style.backgroundColor = '#4f46e5';
+    });
+    
+    // Podświetl aktywny (kliknięty) przycisk na różowo
+    if (kliknietyPrzycisk) {
+        kliknietyPrzycisk.style.backgroundColor = '#ec4899';
+    }
+
+    // Zmień źródło dźwięku
+    odtwarzacz.src = dzwieki[idDzwieku];
+    
+    // Jeśli muzyka już grała, wznów odtwarzanie nowego dźwięku
+    if (!odtwarzacz.paused) {
+        odtwarzacz.play().catch(e => console.error("Błąd odtwarzania:", e));
+    }
+}
+
+function toggleSzum() {
+    if (!odtwarzacz || !btnPlayPauseSzum) return;
+
+    if (odtwarzacz.paused) {
+        // Jeśli nie wybrano dźwięku, załaduj szum domyślnie (pierwszy przycisk)
+        if (!odtwarzacz.src || odtwarzacz.src === window.location.href) {
+            const pierwszyPrzycisk = document.querySelector('.btn-szum');
+            zmienDzwiek('suszarka', pierwszyPrzycisk);
+        }
+        
+        // Próba odtworzenia z zabezpieczeniem przed blokadą przeglądarki
+        odtwarzacz.play().then(() => {
+            btnPlayPauseSzum.innerHTML = '⏸️'; 
+            btnPlayPauseSzum.style.boxShadow = '0 0 30px rgba(219, 39, 119, 0.9)';
+            ustawTimerSzumu();
+        }).catch(error => {
+            console.error("Przeglądarka zablokowała dźwięk:", error);
+            alert("Przeglądarka zablokowała autoodtwarzanie. Kliknij najpierw wybraną ikonę dźwięku (np. Suszarka), a potem wciśnij Play.");
+        });
+
+    } else {
+        zatrzymajSzum();
+    }
+}
+
+function zatrzymajSzum() {
+    if (odtwarzacz) {
+        odtwarzacz.pause();
+        if(btnPlayPauseSzum) {
+            btnPlayPauseSzum.innerHTML = '▶️'; // Zmień ikonę z powrotem na Play
+            btnPlayPauseSzum.style.boxShadow = '0 0 20px rgba(219, 39, 119, 0.6)';
+        }
+        clearTimeout(timerTimeout); // Wyzeruj timer wyłączania
+    }
+}
+
+function ustawTimerSzumu() {
+    clearTimeout(timerTimeout); // Wyczyść poprzedni timer
+    const selectTimera = document.getElementById('timerSzumu');
+    
+    if (selectTimera) {
+        const minuty = parseInt(selectTimera.value);
+        if (minuty > 0) {
+            // Zamień minuty na milisekundy i ustaw opóźnione wyłączenie (zatrzymanie)
+            timerTimeout = setTimeout(() => {
+                zatrzymajSzum();
+                console.log("Timer wyłączył szum po " + minuty + " minutach.");
+            }, minuty * 60 * 1000);
+        }
+    }
+}
+
+// Nasłuchuj zmiany w rozwijanym menu timera
+const selectTimer = document.getElementById('timerSzumu');
+if (selectTimer) {
+    selectTimer.addEventListener('change', () => {
+        // Jeśli muzyka gra i użytkownik zmieni czas, przelicz timer od nowa
+        if (odtwarzacz && !odtwarzacz.paused) {
+            ustawTimerSzumu(); 
+        }
+    });
+}
+    
     // ZAINICJOWANIE WIDOKÓW STARTOWYCH (Dla offline'u zanim Firebase odpowie)
     odswiezWszystkieWidoki();
 });
