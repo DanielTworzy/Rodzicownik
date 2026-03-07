@@ -119,7 +119,6 @@
                 <div class="kafelek" id="kafelekPosilki"><div class="ikona-wrapper" style="background: linear-gradient(135deg, #dcedc8, #c5e1a5); color: #558b2f;">🍴</div><span>Jadłospis</span></div>
                 <div class="kafelek" onclick="document.getElementById('ekranStart').classList.add('ukryty'); document.getElementById('ekranBLW').classList.remove('ukryty');"><div class="ikona-wrapper" style="background: linear-gradient(135deg, #86efac, #22c55e); color: white;">🍏</div> Dieta BLW</div>
                 <div class="kafelek" id="kafelekNotatki"><div class="ikona-wrapper" style="background: linear-gradient(135deg, #ffe0b2, #ffcc80); color: #ef6c00;">📝</div><span>Notatki</span></div>
-                <div class="kafelek" onclick="document.getElementById('ekranStart').classList.add('ukryty'); document.getElementById('ekranSzumy').classList.remove('ukryty');"><div class="ikona-wrapper" style="background: linear-gradient(135deg, #a78bfa, #8b5cf6); color: white;">🧸</div> Usypianie</div>
                 <div class="kafelek" id="kafelekStoper"><div class="ikona-wrapper" style="background: linear-gradient(135deg, #e1bee7, #ce93d8); color: #6a1b9a;">⏱️</div><span>Minutnik</span></div>
 
                 <div class="grid-sekcja">🏠 Zarządzanie Domem</div>
@@ -402,42 +401,6 @@
                 </div>
             </div>
             <div class="historia"><ul id="listaEkrany" style="display: flex; flex-direction: column; gap: 10px;"></ul></div>
-        </main>
-        
-        <main id="ekranSzumy" class="ekran ukryty no-print" style="background-color: #0f172a; min-height: 100vh;">
-            <button onclick="document.getElementById('ekranSzumy').classList.add('ukryty'); document.getElementById('ekranStart').classList.remove('ukryty'); zatrzymajSzum();" class="btn-wroc" style="background-color: rgba(255,255,255,0.1); color: white; border-color: rgba(255,255,255,0.2);">
-                <span class="wroc-ikona">🔙</span> Wróć
-            </button>
-            
-            <div class="card" style="background: linear-gradient(180deg, #1e1b4b, #312e81); border: none; box-shadow: 0 10px 25px rgba(0,0,0,0.5); text-align: center; color: white; margin-top: 20px;">
-                <h3 style="color: #e0e7ff; margin-bottom: 5px;">🧸 Tryb Usypiania</h3>
-                <p style="font-size: 12px; color: #a5b4fc; margin-bottom: 25px;">
-                    Wybierz dźwięk, ustaw timer i połóż telefon obok łóżeczka.
-                </p>
-
-                <div style="display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-bottom: 30px;">
-                    <button class="btn-szum" onclick="zmienDzwiek('suszarka', this)" style="background-color: #ec4899; color: white; border: none; padding: 10px 15px; border-radius: 20px; font-size: 13px; cursor: pointer;">💨 Suszarka</button>
-                    <button class="btn-szum" onclick="zmienDzwiek('deszcz', this)" style="background-color: #4f46e5; color: white; border: none; padding: 10px 15px; border-radius: 20px; font-size: 13px; cursor: pointer;">🌧️ Deszcz</button>
-                    <button class="btn-szum" onclick="zmienDzwiek('serce', this)" style="background-color: #4f46e5; color: white; border: none; padding: 10px 15px; border-radius: 20px; font-size: 13px; cursor: pointer;">❤️ Bicie serca</button>
-                </div>
-
-                <audio id="odtwarzaczSzumow" loop></audio>
-
-                <button id="btnPlayPauseSzum" onclick="toggleSzum()" style="background: linear-gradient(135deg, #f472b6, #db2777); color: white; border: none; border-radius: 50%; width: 90px; height: 90px; font-size: 35px; cursor: pointer; margin-bottom: 30px; box-shadow: 0 0 20px rgba(219, 39, 119, 0.6); display: flex; align-items: center; justify-content: center; margin-left: auto; margin-right: auto;">
-                    ▶️
-                </button>
-
-                <div style="background-color: rgba(0,0,0,0.2); padding: 15px; border-radius: 12px;">
-                    <span style="font-size: 13px; color: #c7d2fe; margin-right: 10px;">Wyłącz dźwięk za: </span>
-                    <select id="timerSzumu" style="padding: 8px; border-radius: 8px; background: #4338ca; color: white; border: 1px solid #6366f1; outline: none; font-size: 13px;">
-                        <option value="0">Nigdy (graj ciągle)</option>
-                        <option value="15">15 minut</option>
-                        <option value="30">30 minut</option>
-                        <option value="45">45 minut</option>
-                        <option value="60">1 godzinę</option>
-                    </select>
-                </div>
-            </div>
         </main>
 
         <main id="ekranStoper" class="ekran ukryty no-print" style="text-align: center;">
