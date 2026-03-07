@@ -1557,3 +1557,23 @@ function renderujProduktyBLW(produkty) {
     // ZAINICJOWANIE WIDOKÓW STARTOWYCH (Dla offline'u zanim Firebase odpowie)
     odswiezWszystkieWidoki();
 });
+
+// --- ŁATKA: AUTOMATYCZNE ZAMYKANIE SUB-EKRANÓW ---
+document.addEventListener('click', function(e) {
+    // Sprawdzamy czy użytkownik kliknął w coś, co należy do dolnego paska nawigacji
+    // Szukamy po ikonach lub tekstach głównych zakładek
+    const tekst = e.target.innerText ? e.target.innerText.toUpperCase() : '';
+    const toMenuDolne = e.target.closest('button, nav, footer, [class*="nav"]') || 
+                        tekst.includes('PULPIT') || 
+                        tekst.includes('KALENDARZ') || 
+                        tekst.includes('PROFIL');
+    
+    // Jeśli kliknięto w dolne menu, bezwarunkowo ukrywamy nasze dodatkowe moduły
+    if (toMenuDolne) {
+        const ekranBLW = document.getElementById('ekranBLW');
+        if (ekranBLW) ekranBLW.classList.add('ukryty');
+        
+        const ekranSkoki = document.getElementById('ekranSkoki');
+        if (ekranSkoki) ekranSkoki.classList.add('ukryty');
+    }
+});
