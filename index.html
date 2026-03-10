@@ -593,60 +593,50 @@
                 <h3>Standard</h3>
                 <div class="price">0 zł</div>
                 <ul class="pricing-list">
-                    <li><span class="check">✔️</span> Dostęp do 14 modułów</li>
-                    <li><span class="check">✔️</span> Planer, Apteczka, Karmienie</li>
-                    <li class="limited"><span class="cross">❌</span> Reklamy w aplikacji</li>
-                    <li class="limited"><span class="cross">❌</span> Profile Dzieci: Tylko 1</li>
-                    <li class="limited"><span class="cross">❌</span> Kopia zapasowa (.json)</li>
-                </ul>
+    <li><span class="check">✔️</span> Baza wiedzy (Skoki, Wyszukiwarka BLW)</li>
+    <li><span class="check">✔️</span> Tryb Dziecka (Skarbonka, Nagrody)</li>
+    <li><span class="check">✔️</span> Tylko 1 Profil Dziecka</li>
+    <li class="limited"><span class="cross">❌</span> Widoczne reklamy w aplikacji</li>
+    <li class="limited"><span class="cross">❌</span> Zablokowane Wykresy, Sejf, Export PDF i Kopia JSON</li>
+</ul>
                 <button class="btn-pricing btn-pricing-outline">Twój obecny plan</button>
             </div>
 
             <div class="pricing-card pricing-card-premium">
-                <div class="bestseller-badge">BESTSELLER</div>
-                <h3 style="color: #fbbf24;">Premium</h3>
-                <div class="price" style="color: white;">20 zł <span class="price-sub" style="color: #94a3b8;">/ na zawsze</span></div>
-                <ul class="pricing-list" style="color: #e2e8f0;">
-                    <li><span class="check">✔️</span> <strong>Pełny Asystent D@niel</strong></li>
-                    <li><span class="check">✔️</span> <strong>Nielimitowane profile dzieci</strong></li>
-                    <li><span class="check">✔️</span> <strong>Sejf na dokumenty (Skaner)</strong></li>
-                    <li><span class="check">✔️</span> <strong>Kopia zapasowa (Export JSON)</strong></li>
-                    <li><span class="check">✔️</span> <strong>Całkowity brak reklam!</strong></li>
-                </ul>
-                <button class="btn-pricing btn-pricing-outline" id="btnTrialPremium" style="margin-bottom: 10px; border-color: #10b981; color: #10b981;">Wypróbuj za darmo przez 3 dni</button>
-                <button class="btn-pricing btn-pricing-gradient" id="btnKupPremium">Kup Pełną Wersję</button>
-                <p style="font-size: 11px; color: #64748b; margin-top: 15px; font-style: italic; text-align: center;">* Opłata Premium to czasowa opcja manualnego zakupu (dostęp na zawsze), mająca na celu wsparcie niezależnego rozwoju aplikacji.</p>
-            </div>
+    <div class="bestseller-badge">BESTSELLER</div>
+    <h3 style="color: #fbbf24;">Premium</h3>
+    
+    <div class="price" style="color: white;">20 zł <span class="price-sub" style="color: #94a3b8;">/ na rok</span></div>
+    
+    <ul class="pricing-list" style="color: #e2e8f0;">
+    <li><span class="check">✔️</span> <strong>Nielimitowane profile dzieci</strong></li>
+    <li><span class="check">✔️</span> <strong>Wykresy Rozwoju i Strażnik Gorączki</strong></li>
+    <li><span class="check">✔️</span> <strong>Zaawansowany Kalendarz i Sejf (PIN)</strong></li>
+    <li><span class="check">✔️</span> <strong>Kopia zapasowa (JSON) i Raporty PDF</strong></li>
+    <li><span class="check">✔️</span> <strong>Zarządzający Asystent D@niel (AI)</strong></li>
+    <li><span class="check">✔️</span> <strong>Całkowity brak reklam!</strong></li>
+</ul>
+    
+    <button class="btn-pricing btn-pricing-outline" id="btnTrialPremium" style="margin-bottom: 10px; border-color: #10b981; color: #10b981;">Wypróbuj za darmo przez 3 dni</button>
+    <button class="btn-pricing btn-pricing-gradient" id="btnKupPremium">Kup Pełną Wersję</button>
+    <p style="font-size: 11px; color: #64748b; margin-top: 15px; font-style: italic; text-align: center;">* Opłata odblokowuje dostęp na 365 dni i wspiera rozwój aplikacji.</p>
+
+    <div style="margin-top: 25px; border-top: 1px solid #334155; padding-top: 20px;">
+        <h4 style="color: #94a3b8; font-size: 13px; margin-bottom: 10px; font-weight: normal; text-align: center;">Masz kod podarunkowy?</h4>
+        
+        <input type="text" id="inputKodAktywacyjny" placeholder="Wpisz kod..." style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #475569; background: #1e293b; color: white; margin-bottom: 10px; text-transform: uppercase; text-align: center; letter-spacing: 2px; font-weight: bold; box-sizing: border-box;">
+
+        <label style="display: flex; align-items: flex-start; gap: 10px; font-size: 11px; color: #94a3b8; margin-bottom: 15px; text-align: left; cursor: pointer;">
+            <input type="checkbox" id="zgodaPremium" style="margin-top: 2px;">
+            <span>Akceptuję Regulamin. Rozumiem, że wpisując kod otrzymuję natychmiastowy dostęp do produktu cyfrowego, tracąc prawo do zwrotu w ciągu 14 dni.</span>
+        </label>
+
+        <button id="btnAktywujPremium" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px dashed #8b5cf6; background: transparent; color: #8b5cf6; font-weight: bold; cursor: pointer; transition: 0.3s; box-sizing: border-box;">
+            🚀 Aktywuj Kod
+        </button>
+    </div>
+</div>
             <br><br>
-        </main>
-
-        <main id="ekranBlik" class="ekran ukryty no-print" style="background-color: #f8fafc; text-align: center; min-height: 100vh;">
-            <button id="btnWrocBlik" class="btn-wroc" style="background: transparent;"><span class="wroc-ikona">🔙</span> Wróć</button>
-            <div style="padding: 20px;">
-                <div style="background: black; color: white; display: inline-block; padding: 10px 20px; font-weight: 900; font-size: 24px; border-radius: 8px; letter-spacing: 2px; margin-bottom: 20px;">BLIK</div>
-                <h2 style="font-size: 22px; color: #1e293b; margin-top: 0;">Odblokuj Premium</h2>
-                <div style="background: white; padding: 20px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); margin: 0 0 20px 0; border: 2px dashed #cbd5e1; text-align: left;">
-                    <p style="margin-top: 0; font-weight: bold; color: #1e293b;">Krok 1: Wyślij przelew BLIK</p>
-                    <p style="font-size: 14px; color: #64748b; margin-bottom: 15px;">Wyślij <strong>20 PLN</strong> na poniższy numer telefonu. <strong>W tytule przelewu wpisz swój własny numer telefonu!</strong></p>
-                    <span style="font-size: 32px; font-weight: 900; color: #e11d48; letter-spacing: 2px; display: block; text-align: center;">577 610 376</span>
-                    <span style="display: block; font-size: 14px; color: #475569; margin-top: 10px; text-align: center;">Odbiorca: Daniel Ćw.</span>
-                </div>
-                <div style="background: white; padding: 20px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); margin: 0 0 30px 0; border: 2px solid #8b5cf6; text-align: left;">
-                    <p style="margin-top: 0; font-weight: bold; color: #8b5cf6;">Krok 2: Kod Aktywacyjny</p>
-                    <p style="font-size: 14px; color: #64748b; margin-bottom: 15px;">Gdy otrzymam wpłatę, odeślę Ci SMS-em jednorazowy kod. Wpisz go tutaj:</p>
-                    <input type="text" id="inputKodAktywacyjny" placeholder="Wpisz kod..." style="text-align: center; font-weight: bold; letter-spacing: 2px; font-size: 18px; text-transform: uppercase; background-color: #f5f3ff; border: 1px solid #ddd6fe;">
-                    
-                    <div style="margin-top: 15px; margin-bottom: 15px; text-align: left; font-size: 11px; color: #64748b; line-height: 1.4;">
-                        <label style="display: flex; align-items: flex-start; gap: 8px; font-weight: normal; margin-top: 0; cursor: pointer;">
-                            <input type="checkbox" id="zgodaPremium" style="width: auto; margin: 0; margin-top: 2px; flex-shrink: 0; transform: scale(1.2);">
-                            <span>Akceptuję Regulamin. Rozumiem, że wpisując kod otrzymuję natychmiastowy dostęp do produktu cyfrowego (Premium). Zgadzam się na to i przyjmuję do wiadomości, że tym samym <strong>tracę prawo do zwrotu i odstąpienia od umowy w ciągu 14 dni</strong>.</span>
-                        </label>
-                    </div>
-
-                    <button id="btnAktywujPremium" class="btn-premium">🚀 Aktywuj Premium</button>
-                </div>
-            </div>
-            <br><br><br>
         </main>
 
         <nav id="pasekDolny" class="bottom-nav no-print ukryty">
@@ -659,6 +649,7 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 
     <script src="script.js"></script>
     

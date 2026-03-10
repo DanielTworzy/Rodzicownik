@@ -18,8 +18,64 @@ document.addEventListener("DOMContentLoaded", function() {
     }
     const auth = firebase.auth();
     const database = firebase.database();
+    const firestore = firebase.firestore();
     
     let currentUserUid = null;
+
+    // ==========================================
+    // 00.5 PANCERNA WERYFIKACJA PŁATNOŚCI (WEBHOOK)
+    // ==========================================
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('zakup') === 'sukces') {
+        window.history.replaceState(null, null, window.location.pathname);
+        alert("⏳ Transakcja w toku... Oczekuję na bezpieczny sygnał z banku (to zajmie ułamek sekundy).");
+    } else if (urlParams.get('zakup') === 'anulowany') {
+        window.history.replaceState(null, null, window.location.pathname);
+        alert("Płatność została anulowana.");
+    }
+
+    // Nowy, inteligentny strażnik - nasłuchuje bazy danych niezależnie od adresu URL!
+    auth.onAuthStateChanged(user => {
+        if (user) {
+            // Wtyczka Stripe po udanej transakcji sama tworzy dokument w kolekcji 'payments'
+            firestore.collection('customers').doc(user.uid).collection('payments')
+                .where('status', '==', 'succeeded')
+                .onSnapshot((snapshot) => {
+                    if (!snapshot.empty) {
+                        let najnowszaPlatnosc = 0;
+                        
+                        // Szukamy najświeższej udanej wpłaty
+                        snapshot.forEach(doc => {
+                            const data = doc.data();
+                            let czas = data.created;
+                            // Wtyczka zapisuje czas w sekundach, zamieniamy na milisekundy
+                            if (czas) {
+                                czas = czas * 1000; 
+                                if (czas > najnowszaPlatnosc) najnowszaPlatnosc = czas;
+                            }
+                        });
+
+                        // Rok ma 365 dni (w milisekundach)
+                        const rokWMilisekundach = 365 * 24 * 60 * 60 * 1000;
+                        
+                        // Sprawdzamy, czy wpłata z bazy jest wciąż ważna
+                        if (Date.now() - najnowszaPlatnosc < rokWMilisekundach) {
+                            const dataWygasniecia = new Date(najnowszaPlatnosc + rokWMilisekundach).toISOString();
+                            
+                            // Jeśli kłódki są zamknięte (brak daty w pamięci), otwieramy je i zapisujemy!
+                            if (localStorage.getItem("premiumValidUntil") !== dataWygasniecia) {
+                                localStorage.setItem("premiumValidUntil", dataWygasniecia);
+                                // Bezpieczny zapis do Twojej głównej bazy Realtime Database
+                                database.ref('users/' + user.uid + '/premiumValidUntil').set(dataWygasniecia);
+                                
+                                alert("✅ Weryfikacja zakończona sukcesem! Wersja Premium odblokowana na 365 dni. Witamy!");
+                                location.reload(); // Odświeżamy aplikację, żeby usunąć kłódki
+                            }
+                        }
+                    }
+                });
+        }
+    });
 
     // ==========================================
     // 01. SILNIK SYNCHRONIZACJI Z CHMURĄ
@@ -47,7 +103,25 @@ document.addEventListener("DOMContentLoaded", function() {
         "RDZ-O1P2", "RDZ-Q3R4", "RDZ-S5T6", "RDZ-U7V8", "RDZ-W9X0", "RDZ-Y1Z2", "RDZ-A3B4", "RDZ-C5D6", "RDZ-E7F8", "RDZ-G9H0"
     ];
 
-    let czyPremiumPelne = localStorage.getItem("rodzicownikPremium") === "true";
+    // --- NOWY SYSTEM PREMIUM (SPRAWDZANIE DATY) ---
+    let czyPremiumPelne = false;
+    let dataWaznosciPremium = localStorage.getItem("premiumValidUntil");
+
+    if (dataWaznosciPremium) {
+        // Użytkownik ma czasowe Premium - sprawdzamy czy nie wygasło
+        if (new Date() < new Date(dataWaznosciPremium)) {
+            czyPremiumPelne = true;
+        } else {
+            // Premium wygasło! Usuwamy z urządzenia
+            localStorage.removeItem("premiumValidUntil");
+            czyPremiumPelne = false;
+        }
+    } 
+    // Furtka dla starych użytkowników (którzy kupili na zawsze)
+    else if (localStorage.getItem("rodzicownikPremium") === "true") {
+        czyPremiumPelne = true;
+    }
+    // ----------------------------------------------
     let koniecTrialu = parseInt(localStorage.getItem("premiumTrialEnd")) || 0;
     let czyTrial = false;
     let pozostaloTrialText = "";
@@ -108,7 +182,7 @@ document.addEventListener("DOMContentLoaded", function() {
         document.getElementById("ekranRozmiary"), document.getElementById("ekranCytaty"), document.getElementById("ekranPlan"), 
         document.getElementById("ekranPosilki"), document.getElementById("ekranSejf"), document.getElementById("ekranAsystent"), 
         document.getElementById("ekranPakowanie"), document.getElementById("ekranOsiagniecia"), 
-        document.getElementById("ekranPremium"), document.getElementById("ekranBlik"), document.getElementById("ekranKarmienie"), 
+        document.getElementById("ekranPremium"), document.getElementById("ekranKarmienie"), 
         document.getElementById("ekranBilans"), document.getElementById("ekranEkrany"), document.getElementById("ekranBackup"), document.getElementById("ekranDziecka"),
         ekranLogowania, ekranRegulamin
     ];
@@ -135,7 +209,20 @@ document.addEventListener("DOMContentLoaded", function() {
             database.ref('users/' + currentUserUid).once('value').then(snapshot => {
                 const daneZChmury = snapshot.val();
                 if (daneZChmury) {
-                    if (daneZChmury.rodzicownikPremium) czyPremiumPelne = (daneZChmury.rodzicownikPremium === "true");
+                    // --- ODCZYT WAZNOSCI PREMIUM Z CHMURY ---
+                    if (daneZChmury.premiumValidUntil) {
+                        localStorage.setItem("premiumValidUntil", daneZChmury.premiumValidUntil);
+                        if (new Date() < new Date(daneZChmury.premiumValidUntil)) {
+                            czyPremiumPelne = true;
+                        } else {
+                            czyPremiumPelne = false;
+                        }
+                    } 
+                    // Furtka dla starych użytkowników w chmurze
+                    else if (daneZChmury.rodzicownikPremium === "true") {
+                        czyPremiumPelne = true;
+                    }
+                    // ----------------------------------------
                     
                     // --- START NOWEJ WERYFIKACJI TRIALU ---
                     if (daneZChmury.premiumTrialEnd) {
@@ -322,9 +409,16 @@ if (btnZalogujGoogle) {
         });
     }
 
-    if(document.getElementById("btnWyloguj")) {
-        document.getElementById("btnWyloguj").addEventListener("click", () => { if(confirm("Na pewno chcesz się wylogować?")) { auth.signOut(); } });
-    }
+   if(document.getElementById("btnWyloguj")) {
+    document.getElementById("btnWyloguj").addEventListener("click", () => { 
+        if(confirm("Na pewno chcesz się wylogować?")) { 
+            // CZYŚCIMY PAMIĘĆ PREMIUM PRZY WYLOGOWANIU
+            localStorage.removeItem("premiumValidUntil");
+            localStorage.removeItem("rodzicownikPremium");
+            auth.signOut(); 
+        } 
+    });
+}
 
     // OBSŁUGA LINKÓW DO REGULAMINU I WROĆ
     document.getElementById("linkRegulaminLogowanie").addEventListener("click", (e) => { e.preventDefault(); pokazEkran(ekranRegulamin, "Regulamin"); });
@@ -410,8 +504,46 @@ if (btnZalogujGoogle) {
     const banerPremium = document.getElementById("banerPremiumPulpit");
     if(banerPremium) { banerPremium.addEventListener("click", () => { pokazEkran(document.getElementById("ekranPremium"), "Konto Premium 👑"); }); }
     
+    // ==========================================
+    // 05. OBSŁUGA PŁATNOŚCI STRIPE (TRYB LIVE)
+    // ==========================================
     const przyciskKup = document.getElementById("btnKupPremium");
-    if(przyciskKup) { przyciskKup.addEventListener("click", () => { pokazEkran(document.getElementById("ekranBlik"), "Aktywacja Premium"); }); }
+    if(przyciskKup) {
+        przyciskKup.addEventListener("click", () => {
+            if(!currentUserUid) return alert("Musisz być zalogowany, aby dokonać zakupu!");
+
+            przyciskKup.innerText = "⏳ Łączenie z kasą...";
+            przyciskKup.disabled = true;
+
+            // TWOJE ID CENY Z TRYBU LIVE (zaczyna się od price_...)
+            const MOJE_ID_CENY_LIVE = 'price_1T9CMLEAhtYMGg8kzKZZLTHC'; 
+
+            firestore.collection('customers').doc(currentUserUid)
+                .collection('checkout_sessions').add({
+                    price: MOJE_ID_CENY_LIVE, 
+                    mode: 'payment',
+                    success_url: window.location.origin + window.location.pathname + "?zakup=sukces",
+                    cancel_url: window.location.origin + window.location.pathname + "?zakup=anulowany"
+                }).then((docRef) => {
+                    docRef.onSnapshot((snap) => {
+                        const data = snap.data();
+                        if (data && data.url) {
+                            // PRZEKIEROWANIE DO PRAWDZIWEJ KASY
+                            window.location.assign(data.url);
+                        }
+                        if (data && data.error) {
+                            alert("Błąd: " + data.error.message);
+                            przyciskKup.innerText = "Kup Pełną Wersję";
+                            przyciskKup.disabled = false;
+                        }
+                    });
+                }).catch(error => {
+                    alert("Błąd połączenia: " + error.message);
+                    przyciskKup.innerText = "Kup Pełną Wersję";
+                    przyciskKup.disabled = false;
+                });
+        });
+    }
 
     const przyciskTrial = document.getElementById("btnTrialPremium");
     if(przyciskTrial) {
@@ -448,11 +580,24 @@ if (btnZalogujGoogle) {
             }
 
             if (PULA_KODOW_PREMIUM.includes(wpisanyKod)) {
-                zapiszWChmurze("rodzicownikPremium", "true"); czyPremium = true; czyPremiumPelne = true;
-                alert("✅ Gratulacje! Kod poprawny. Wersja Premium została odblokowana na zawsze!");
-                document.getElementById("inputKodAktywacyjny").value = ""; btnNavStart.click(); odswiezWidokPulpitu(); 
-            } else if (wpisanyKod === "") { alert("Wpisz kod, który otrzymałeś w wiadomości SMS.");
-            } else { alert("❌ Błędny kod aktywacyjny! Upewnij się, że wpisałeś go poprawnie."); }
+                // NOWA LOGIKA: Ustawiamy datę wygaśnięcia na 365 dni od teraz
+                const dzisiaj = new Date();
+                const zaRok = new Date(dzisiaj.setFullYear(dzisiaj.getFullYear() + 1));
+                const dataWygasniecia = zaRok.toISOString(); // Format np. "2027-03-08T12:00:00.000Z"
+
+                zapiszWChmurze("premiumValidUntil", dataWygasniecia); 
+                czyPremium = true; 
+                czyPremiumPelne = true; 
+                
+                alert("✅ Gratulacje! Kod poprawny. Wersja Premium została odblokowana na cały rok!");
+                document.getElementById("inputKodAktywacyjny").value = ""; 
+                btnNavStart.click(); 
+                odswiezWidokPulpitu(); 
+            } else if (wpisanyKod === "") { 
+                alert("Wpisz kod, który otrzymałeś w wiadomości SMS.");
+            } else { 
+                alert("❌ Błędny kod aktywacyjny! Upewnij się, że wpisałeś go poprawnie."); 
+            }
         });
     }
 
