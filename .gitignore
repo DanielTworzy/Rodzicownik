@@ -1,0 +1,25 @@
+# ==========================================
+# PLIKI SYSTEMOWE (Mac / Windows)
+# ==========================================
+.DS_Store
+Thumbs.db
+
+# ==========================================
+# PLIKI FIREBASE (Lokalne logi i cache)
+# ==========================================
+.firebase/
+firebase-debug.log
+firebase-debug.*.log
+
+# ==========================================
+# EDYTORY KODU (Konfiguracje lokalne)
+# ==========================================
+.vscode/
+.idea/
+
+# ==========================================
+# MODUŁY NODE I ZMIENNE ŚRODOWISKOWE (Na przyszłość)
+# ==========================================
+node_modules/
+.env
+.env.local
