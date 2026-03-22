@@ -10,10 +10,12 @@
     <meta name="theme-color" content="#3b82f6">
     <link rel="apple-touch-icon" href="icon.png">
 </head>
-<body>
-    <div class="app-container">
-        <header class="no-print">
-            <h1 id="tytulAplikacji">Rodzicownik 📔💙</h1>
+<body style="margin: 0; padding: 0;">
+    <div class="app-container" style="position: relative;">
+        
+        <!-- PRZYKLEJONY GÓRNY PASEK -->
+        <header class="no-print" style="position: sticky; top: 0; z-index: 1000; background-color: #ffffff; box-shadow: 0 2px 10px rgba(0,0,0,0.05); padding-top: 15px; padding-bottom: 15px; margin-bottom: 15px;">
+            <h1 id="tytulAplikacji" style="margin: 0; line-height: 1.2;">Rodzicownik 📔💙</h1>
         </header>
 
         <div class="print-header ukryty">
@@ -83,10 +85,26 @@
 
         <main id="ekranStart" class="ekran ukryty no-print">
             
-            <div class="powitanie">
-                <div class="badge-mowi">Mówi...</div>
-                <h2>Cześć, Rodzicu! 👋</h2>
-                <p>Twój notatnik dowodzenia.</p>
+            <!-- Dodany padding-top: 15px, żeby zmniejszyć domyślną pustą przestrzeń nad przyciskiem -->
+            <div class="powitanie" style="text-align: center; padding-top: 15px; padding-bottom: 10px;">
+                
+                <!-- 1. UKRYTA WYSZUKIWARKA -->
+                <div id="dashboardSearchContainer" style="display: none; width: 100%; margin-bottom: 15px;">
+                    <div style="position: relative; width: 100%;">
+                        <span style="position: absolute; left: 15px; top: 12px; font-size: 16px;">🔍</span>
+                        <input type="text" id="inputWyszukiwarkaPulpit" placeholder="Czego szukasz? (np. apteczka, sen)..." style="width: 100%; padding: 12px 15px 12px 40px; border-radius: 12px; border: 2px solid #3b82f6; font-size: 14px; outline: none; box-sizing: border-box; background-color: #ffffff; box-shadow: 0 4px 15px rgba(0,0,0,0.05);">
+                    </div>
+                </div>
+
+                <!-- 2. KLIKALNY PRZYCISK "MÓWI..." -->
+                <!-- margin-top: 5px ustala idealny, delikatny odstęp od sufitu -->
+                <div id="dashboardSearchTrigger" style="background-color: #3b82f6; color: white; display: inline-block; padding: 6px 20px; border-radius: 12px; font-weight: 800; font-size: 11px; letter-spacing: 1px; text-transform: uppercase; cursor: pointer; box-shadow: 0 4px 10px rgba(59, 130, 246, 0.3); transition: 0.2s; margin-top: 5px; margin-bottom: 15px;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                    Mówi...
+                </div>
+
+                <!-- Reszta powitania -->
+                <h2 style="margin-top: 0; margin-bottom: 5px;">Cześć, Rodzicu! 👋</h2>
+                <p style="margin-top: 0; margin-bottom: 0;">Twój notatnik dowodzenia.</p>
             </div>
 
             <div class="premium-banner" id="banerPremiumPulpit">
@@ -540,14 +558,31 @@
             <div class="card">
                 <h3>Mój Skarb 💛</h3>
                 
-                <select id="wyborDziecka" style="margin-bottom: 15px; font-weight: 800; color: #8e24aa; border: 2px solid #e1bee7;"></select>
-                <button id="btnDodajDziecko" class="btn-premium" style="margin-bottom: 15px; font-size: 13px; padding: 12px;">➕ Dodaj kolejne dziecko (Premium)</button>
-                
-                <label>Imię dziecka:</label><input type="text" id="imieDziecka" placeholder="Np. Olaf (Wymagane!)">
-                <label>Waga (kg):</label><input type="number" id="wagaDziecka" step="0.1" placeholder="Wymagane do kalkulatora leków">
-                <label>Alergie i uczulenia:</label><textarea id="alergieDziecka" rows="3"></textarea>
-                <button id="btnZapiszProfil" class="btn-akcja" style="margin-top: 15px;">💾 Zapisz dane profilu</button>
+                <!-- Nowa sekcja awatara -->
+        <div style="text-align: center; margin-bottom: 20px;">
+            <div id="podgladAwatara" style="width: 80px; height: 80px; border-radius: 50%; background-color: #e2e8f0; margin: 0 auto 10px auto; overflow: hidden; display: flex; align-items: center; justify-content: center; border: 3px solid #8b5cf6; font-size: 30px;">
+                👤
             </div>
+            <label for="inputAwatar" class="btn-akcja" style="background-color: #8b5cf6; font-size: 11px; padding: 8px 15px; cursor: pointer; display: inline-block; margin: 0;">📷 Zmień zdjęcie</label>
+            <input type="file" id="inputAwatar" accept="image/*" style="display: none;">
+        </div>
+
+        <!-- Nowa sekcja roli -->
+        <label>Twoja rola (do Forum):</label>
+        <select id="rolaRodzica" style="margin-bottom: 15px; font-weight: bold;">
+            <option value="Mama">👩 Mama</option>
+            <option value="Tata">👨 Tata</option>
+            <option value="Opiekun">🧑 Opiekun</option>
+        </select>
+        
+        <select id="wyborDziecka" style="margin-bottom: 15px; font-weight: 800; color: #8e24aa; border: 2px solid #e1bee7;"></select>
+        <button id="btnDodajDziecko" class="btn-premium" style="margin-bottom: 15px; font-size: 13px; padding: 12px;">➕ Dodaj kolejne dziecko (Premium)</button>
+        
+        <label>Imię dziecka:</label><input type="text" id="imieDziecka" placeholder="Np. Olaf">
+        <label>Waga (kg):</label><input type="number" id="wagaDziecka" step="0.1" placeholder="Wymagane do kalkulatora leków">
+        <label>Alergie i uczulenia:</label><textarea id="alergieDziecka" rows="3"></textarea>
+        <button id="btnZapiszProfil" class="btn-akcja" style="margin-top: 15px;">💾 Zapisz dane profilu</button>
+    </div>
             
             <div class="card" style="margin-top: 15px;">
                 <h3 style="color: #dc3545;">🔒 Bezpieczeństwo</h3>
@@ -639,12 +674,55 @@
             <br><br>
         </main>
 
-        <nav id="pasekDolny" class="bottom-nav no-print ukryty">
-            <button id="navStart" class="nav-btn aktywny"><div class="nav-icon">🏠</div><span>Pulpit</span></button>
-            <button id="navKalendarz" class="nav-btn"><div class="nav-icon">📅</div><span>Kalendarz</span></button>
-            <button id="navProfil" class="nav-btn"><div class="nav-icon">👤</div><span>Profil</span></button>
-        </nav>
+<main id="ekranForum" class="ekran ukryty"> 
+
+    <!-- NOWOŚĆ: WYSZUKIWARKA POSTÓW (PRZYKLEJONA DO GÓRY) -->
+    <!-- Ustawiliśmy top: 60px, aby zatrzymała się idealnie pod głównym białym paskiem aplikacji -->
+    <div style="position: sticky; top: 60px; z-index: 990; background-color: #ffffff; padding: 10px 15px 15px 15px; margin-top: -15px;">
+        <div style="position: relative; box-shadow: 0 2px 10px rgba(0,0,0,0.05); border-radius: 8px;">
+            <span style="position: absolute; left: 12px; top: 10px; font-size: 16px;">🔍</span>
+            <input type="text" id="wyszukiwarkaForum" placeholder="Szukaj w postach (np. ząbkowanie, sen)..." style="width: 100%; padding: 10px 10px 10px 38px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 14px; outline: none; box-sizing: border-box;">
+        </div>
     </div>
+
+    <!-- 1. LISTA POSTÓW NA GÓRZE -->
+    <div id="listaPostowForum" style="display: flex; flex-direction: column; gap: 12px; padding: 15px; padding-bottom: 160px;">
+        <div style="text-align: center; color: #94a3b8; padding: 20px;">Ładowanie postów... ⏳</div>
+    </div>
+
+    <!-- 2. RUBRYKA DO WPISYWANIA - ZAWSZE NA WIERZCHU -->
+    <div class="card" style="position: fixed; bottom: 75px; left: 15px; right: 15px; max-width: 480px; margin: 0 auto; z-index: 1000; padding: 15px; border-radius: 16px; box-shadow: 0 -4px 25px rgba(0,0,0,0.15); background: white; border: 1px solid #e2e8f0; box-sizing: border-box;">
+        <div style="display: flex; gap: 15px; align-items: flex-start;">
+            <div id="forumMojAwatar" style="width: 40px; height: 40px; border-radius: 50%; background-color: #f1f5f9; overflow: hidden; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; border: 2px solid #cbd5e1;">
+                👤
+            </div>
+            <textarea id="nowyPostTekst" placeholder="O co chcesz zapytać? Czym się podzielić?" style="flex-grow: 1; border: none; border-bottom: 2px solid #cbd5e1; font-family: inherit; font-size: 14px; padding: 5px; resize: none; min-height: 40px; outline: none; background: transparent; transition: 0.3s;" onfocus="this.style.borderColor='#3b82f6'" onblur="this.style.borderColor='#cbd5e1'"></textarea>
+        </div>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px;">
+            <div style="display: flex; gap: 10px; align-items: center;">
+                <span id="forumMojaTozsamosc" style="font-size: 11px; color: #64748b; font-weight: bold;">Rodzic Dziecka</span>
+                
+                <select id="nowyPostKategoria" style="font-size: 11px; padding: 4px 8px; border-radius: 12px; border: 1px solid #cbd5e1; outline: none; background: #f8fafc; color: #475569; font-weight: bold; cursor: pointer;">
+                    <option value="💬 Ogólne">💬 Ogólne</option>
+                    <option value="🩺 Zdrowie">🩺 Zdrowie</option>
+                    <option value="😴 Sen">😴 Sen</option>
+                    <option value="🍏 Dieta">🍏 Dieta</option>
+                    <option value="🧸 Rozwój">🧸 Rozwój</option>
+                </select>
+            </div>
+
+            <button id="btnOpublikujPost" class="btn" style="padding: 8px 15px; font-size: 13px; margin: 0;">Wyślij 🚀</button>
+        </div>
+    </div>
+
+</main>
+
+        <nav id="pasekDolny" class="bottom-nav no-print ukryty">
+    <button id="navStart" class="nav-btn aktywny"><div class="nav-icon">🏠</div><span>Pulpit</span></button>
+    <button id="navKalendarz" class="nav-btn"><div class="nav-icon">📅</div><span>Kalendarz</span></button>
+    <button id="navForum" class="nav-btn"><div class="nav-icon">🌍</div><span>Społeczność</span></button>
+    <button id="navProfil" class="nav-btn"><div class="nav-icon">👤</div><span>Profil</span></button>
+</nav>
     
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>

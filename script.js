@@ -21,6 +21,7 @@ document.addEventListener("DOMContentLoaded", function() {
     const firestore = firebase.firestore();
     
     let currentUserUid = null;
+    let aktualnyAwatarBase64 = ""; // Nasza zmienna przeniesiona na bezpieczny szczyt!
 
     // ==========================================
     // 00.5 PANCERNA WERYFIKACJA PŁATNOŚCI (WEBHOOK)
@@ -170,6 +171,8 @@ document.addEventListener("DOMContentLoaded", function() {
     let bazaSzczepien = JSON.parse(localStorage.getItem("narzedziaSzczepienia")) || [];
     let bazaEkrany = JSON.parse(localStorage.getItem("narzedziaEkrany")) || [];
 
+    const ekranForum = document.getElementById('ekranForum');
+    const navForum = document.getElementById('navForum');
     const ekranLogowania = document.getElementById("ekranLogowania");
     const pasekDolny = document.getElementById("pasekDolny");
     const ekranStart = document.getElementById("ekranStart");
@@ -184,14 +187,15 @@ document.addEventListener("DOMContentLoaded", function() {
         document.getElementById("ekranPakowanie"), document.getElementById("ekranOsiagniecia"), 
         document.getElementById("ekranPremium"), document.getElementById("ekranKarmienie"), 
         document.getElementById("ekranBilans"), document.getElementById("ekranEkrany"), document.getElementById("ekranBackup"), document.getElementById("ekranDziecka"),
+        ekranForum, // <--- O TUTAJ DODALIŚMY FORUM!
         ekranLogowania, ekranRegulamin
     ];
 
-    function czyscPasekNawigacji() { btnNavStart.classList.remove("aktywny"); btnNavKalendarz.classList.remove("aktywny"); btnNavProfil.classList.remove("aktywny"); }
+    function czyscPasekNawigacji() { btnNavStart.classList.remove("aktywny"); btnNavKalendarz.classList.remove("aktywny"); btnNavProfil.classList.remove("aktywny"); navForum.classList.remove("aktywny"); }
     function pokazEkran(ekranDoPokazania, tytul) {
         wszystkieEkrany.forEach(e => { if(e) e.classList.add("ukryty"); }); 
         if(ekranDoPokazania) ekranDoPokazania.classList.remove("ukryty");
-        document.getElementById("tytulAplikacji").innerText = tytul;
+        document.getElementById("tytulAplikacji").innerHTML = tytul;
         if (ekranDoPokazania === document.getElementById("ekranDziecka") || ekranDoPokazania === document.getElementById("ekranPremium") || ekranDoPokazania === document.getElementById("ekranBlik") || ekranDoPokazania === ekranLogowania || ekranDoPokazania === ekranRegulamin) {
             pasekDolny.classList.add("ukryty"); 
         } else {
@@ -468,6 +472,24 @@ if (btnZalogujGoogle) {
 
     btnNavStart.addEventListener("click", () => { pokazEkran(ekranStart, "Rodzicownik 📔💙"); czyscPasekNawigacji(); btnNavStart.classList.add("aktywny"); odswiezWidokPulpitu(); });
     btnNavKalendarz.addEventListener("click", () => { pokazEkran(wszystkieEkrany[6], "Kalendarz 📅"); czyscPasekNawigacji(); btnNavKalendarz.classList.add("aktywny"); renderujKalendarz(); });
+    
+    // --- POPRAWIONY PRZYCISK FORUM Z BOGATYM TYTUŁEM ---
+    navForum.addEventListener('click', () => {
+        pokazEkran(ekranForum, `
+            Wioska Rodziców 🌍
+            <div style="font-size: 12px; font-weight: bold; margin-top: 4px; color: #8b5cf6; letter-spacing: 0.5px;">
+                Wymieniaj się wiedzą, pytaj i wspieraj innych!
+            </div>
+        `);
+        czyscPasekNawigacji();
+        navForum.classList.add("aktywny");
+        zaladujPostyForum(); 
+        if (typeof zaktualizujMojaTozsamoscNaForum === "function") {
+            zaktualizujMojaTozsamoscNaForum(); 
+        }
+    });
+    // ---------------------------------
+
     btnNavProfil.addEventListener("click", () => { pokazEkran(wszystkieEkrany[1], "Profil 👤"); czyscPasekNawigacji(); btnNavProfil.classList.add("aktywny"); });
     
     document.getElementById("kafelekZdrowie").addEventListener("click", () => pokazEkran(wszystkieEkrany[2], "Apteczka 🩺"));
@@ -673,30 +695,58 @@ if (btnZalogujGoogle) {
     // MODUŁY ZAPISUJĄCE DO CHMURY
     // ==========================================
     function renderujWybierakProfili() {
-        const sel = document.getElementById("wyborDziecka"); sel.innerHTML = "";
-        bazaProfili.forEach(p => { const opt = document.createElement("option"); opt.value = p.id; opt.innerText = p.imie || "Dziecko"; if (p.id == aktywnyProfilId) opt.selected = true; sel.appendChild(opt); });
-        wczytajAktywnyProfil();
-    }
+    const sel = document.getElementById("wyborDziecka"); sel.innerHTML = "";
+    bazaProfili.forEach(p => { const opt = document.createElement("option"); opt.value = p.id; opt.innerText = p.imie || "Dziecko"; if (p.id == aktywnyProfilId) opt.selected = true; sel.appendChild(opt); });
+    wczytajAktywnyProfil();
+}
     function wczytajAktywnyProfil() {
         const p = bazaProfili.find(x => x.id == aktywnyProfilId) || bazaProfili[0];
-        document.getElementById("imieDziecka").value = p.imie; document.getElementById("wagaDziecka").value = p.waga; document.getElementById("alergieDziecka").value = p.alergie;
-        if(document.getElementById("mojPseudonimCzatu")) { document.getElementById("mojPseudonimCzatu").innerText = `Rodzic ${p.imie || "Dziecka"}`; }
+        
+        // 1. Podstawowe dane
+        document.getElementById("imieDziecka").value = p.imie || ""; 
+        document.getElementById("wagaDziecka").value = p.waga || ""; 
+        document.getElementById("alergieDziecka").value = p.alergie || "";
+        
+        // 2. NOWOŚĆ: Ładowanie roli i awatara do widoku!
+        if (p.rolaRodzica) {
+            document.getElementById("rolaRodzica").value = p.rolaRodzica;
+        }
+        
+        // Jeśli mamy zapisane zdjęcie, pokazujemy je. Jeśli nie - dajemy domyślną emotkę.
+        if (typeof aktualnyAwatarBase64 !== 'undefined') {
+            if (p.awatar) {
+                aktualnyAwatarBase64 = p.awatar;
+                document.getElementById("podgladAwatara").innerHTML = `<img src="${p.awatar}" style="width:100%; height:100%; object-fit:cover;">`;
+            } else {
+                aktualnyAwatarBase64 = "";
+                document.getElementById("podgladAwatara").innerHTML = "👤";
+            }
+        }
+
+        if(document.getElementById("mojPseudonimCzatu")) { 
+            document.getElementById("mojPseudonimCzatu").innerText = `Rodzic ${p.imie || "Dziecka"}`; 
+        }
         zapiszWChmurze("medProfil", {imie: p.imie, waga: p.waga, alergie: p.alergie});
     }
 
-    document.getElementById("wyborDziecka").addEventListener("change", (e) => { aktywnyProfilId = e.target.value; zapiszWChmurze("medAktywnyProfilId", aktywnyProfilId); wczytajAktywnyProfil(); });
-    document.getElementById("btnDodajDziecko").addEventListener("click", () => {
-        if(!czyPremium) { if(confirm("Dodawanie kolejnych profili to funkcja Premium. Czy chcesz ją odblokować?")) { pokazEkran(document.getElementById("ekranPremium"), "Konto Premium 👑"); } return; }
-        const noweImie = prompt("Podaj imię kolejnego dziecka:");
-        if (noweImie) {
-            const nowyProfil = { id: Date.now(), imie: noweImie, waga: "", alergie: "" }; bazaProfili.push(nowyProfil); zapiszWChmurze("medBazaProfili", bazaProfili);
-            aktywnyProfilId = nowyProfil.id; zapiszWChmurze("medAktywnyProfilId", aktywnyProfilId); renderujWybierakProfili(); alert(`Dodano profil: ${noweImie}! Wpisz teraz jego wagę.`);
+    document.getElementById("btnZapiszProfil").addEventListener("click", () => {
+        let p = bazaProfili.find(x => x.id == aktywnyProfilId);
+        if (!p) p = bazaProfili[0]; // Pancerne zabezpieczenie przed błędem
+        
+        p.imie = document.getElementById("imieDziecka").value;
+        p.waga = document.getElementById("wagaDziecka").value;
+        p.alergie = document.getElementById("alergieDziecka").value;
+        
+        p.rolaRodzica = document.getElementById("rolaRodzica").value;
+        
+        // Zabezpieczenie przed błędem z brakiem zdefiniowanej zmiennej awatara
+        if (typeof aktualnyAwatarBase64 !== 'undefined') {
+            p.awatar = aktualnyAwatarBase64;
         }
-    });
 
-    document.getElementById("btnZapiszProfil").addEventListener("click", () => { 
-        let p = bazaProfili.find(x => x.id == aktywnyProfilId); p.imie = document.getElementById("imieDziecka").value; p.waga = document.getElementById("wagaDziecka").value; p.alergie = document.getElementById("alergieDziecka").value; 
-        zapiszWChmurze("medBazaProfili", bazaProfili); renderujWybierakProfili(); alert("✅ Zapisano dane profilu!"); 
+        zapiszWChmurze("medBazaProfili", bazaProfili); 
+        renderujWybierakProfili(); 
+        alert("✅ Zapisano dane i zaktualizowano profil!");
     });
 
     document.getElementById("btnZapiszPin").addEventListener("click", () => { 
@@ -1701,7 +1751,6 @@ function renderujProduktyBLW(produkty) {
     
     // ZAINICJOWANIE WIDOKÓW STARTOWYCH (Dla offline'u zanim Firebase odpowie)
     odswiezWszystkieWidoki();
-});
 
 // --- ŁATKA: AUTOMATYCZNE ZAMYKANIE SUB-EKRANÓW ---
 document.addEventListener('click', function(e) {
@@ -1721,4 +1770,340 @@ document.addEventListener('click', function(e) {
         const ekranSkoki = document.getElementById('ekranSkoki');
         if (ekranSkoki) ekranSkoki.classList.add('ukryty');
     }
+}); // <--- Poprawne zamknięcie łatki zamykającej subekrany
+
+// ==========================================
+// LOGIKA PROFILU (AWATARY I ROLA)
+// ==========================================
+
+// Nasłuchiwanie na wybór zdjęcia
+document.getElementById('inputAwatar').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(event) {
+        const img = new Image();
+        img.onload = function() {
+            // Tworzymy wirtualne płótno, żeby zmniejszyć zdjęcie (trik optymalizacyjny!)
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = 100;
+            canvas.height = 100;
+            ctx.drawImage(img, 0, 0, 100, 100);
+            
+            // Konwersja do lekkiego tekstu
+            aktualnyAwatarBase64 = canvas.toDataURL('image/jpeg', 0.7); 
+            
+            // Podmiana na ekranie
+            document.getElementById('podgladAwatara').innerHTML = `<img src="${aktualnyAwatarBase64}" style="width:100%; height:100%; object-fit:cover;">`;
+        }
+        img.src = event.target.result;
+    }
+    reader.readAsDataURL(file);
 });
+
+// Zaktualizuj wyświetlanie na forum tego, kim jesteś
+function zaktualizujMojaTozsamoscNaForum() {
+    const rola = document.getElementById('rolaRodzica').value || "Rodzic";
+    const imie = document.getElementById('imieDziecka').value || "Dziecka";
+    document.getElementById('forumMojaTozsamosc').innerText = `${rola} ${imie}`;
+    
+    if (aktualnyAwatarBase64) {
+        document.getElementById('forumMojAwatar').innerHTML = `<img src="${aktualnyAwatarBase64}" style="width:100%; height:100%; object-fit:cover;">`;
+    }
+}
+
+// ==========================================
+// LOGIKA FORUM (WYSZUKIWARKA + ODPOWIEDZI + POLUBIENIA + TAGI KATEGORII)
+// ==========================================
+
+let wszystkiePostyForum = []; 
+
+// Nasłuchiwanie wpisywania w wyszukiwarce
+document.getElementById('wyszukiwarkaForum').addEventListener('input', () => {
+    renderujWidokForum();
+});
+
+// 1. Publikowanie głównego posta
+document.getElementById('btnOpublikujPost').addEventListener('click', () => {
+    const tresc = document.getElementById('nowyPostTekst').value.trim();
+    if (!tresc) {
+        alert("Napisz coś najpierw! ✍️");
+        return;
+    }
+    
+    const rola = document.getElementById('rolaRodzica').value || "Rodzic";
+    const imie = document.getElementById('imieDziecka').value || "Dziecka";
+    const kategoria = document.getElementById('nowyPostKategoria').value || "💬 Ogólne"; // Pobieranie kategorii!
+    
+    const post = {
+        userId: currentUserUid || "Anonim", 
+        autor: `${rola} ${imie}`,
+        awatar: aktualnyAwatarBase64 || "",
+        tresc: tresc,
+        kategoria: kategoria, // Zapisywanie kategorii do Firebase
+        data: Date.now()
+    };
+
+    const btnWyslij = document.getElementById('btnOpublikujPost');
+    btnWyslij.disabled = true;
+    btnWyslij.innerText = "Wysyłam...";
+
+    database.ref('forum_posts').push(post).then(() => {
+        document.getElementById('nowyPostTekst').value = ""; 
+        btnWyslij.disabled = false;
+        btnWyslij.innerText = "Wyślij 🚀";
+        
+        setTimeout(() => {
+            window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+        }, 300);
+    }).catch(error => {
+        btnWyslij.disabled = false;
+        btnWyslij.innerText = "Wyślij 🚀";
+        alert("Błąd publikacji: " + error.message);
+    });
+});
+
+// 2. Pobieranie postów z Firebase
+function zaladujPostyForum() {
+    database.ref('forum_posts').off('value'); 
+
+    database.ref('forum_posts').orderByChild('data').limitToLast(50).on('value', (snapshot) => {
+        wszystkiePostyForum = []; 
+        
+        snapshot.forEach(child => {
+            const postData = child.val();
+            postData.id = child.key; 
+            wszystkiePostyForum.push(postData);
+        });
+        
+        renderujWidokForum(); 
+    });
+}
+
+// 3. Renderowanie postów z TAGAMI
+function renderujWidokForum() {
+    const lista = document.getElementById('listaPostowForum');
+    const frazaSzukana = document.getElementById('wyszukiwarkaForum').value.toLowerCase().trim();
+    lista.innerHTML = '';
+    
+    if (wszystkiePostyForum.length === 0) {
+        lista.innerHTML = '<div style="text-align: center; color: #94a3b8; padding: 20px;">Bądź pierwszy! Napisz coś do innych rodziców. 🌍</div>';
+        return;
+    }
+
+    const przefiltrowane = wszystkiePostyForum.filter(post => {
+        const tresc = post.tresc ? post.tresc.toLowerCase() : "";
+        const autor = post.autor ? post.autor.toLowerCase() : "";
+        const kat = post.kategoria ? post.kategoria.toLowerCase() : "";
+        return tresc.includes(frazaSzukana) || autor.includes(frazaSzukana) || kat.includes(frazaSzukana);
+    });
+
+    if (przefiltrowane.length === 0) {
+        lista.innerHTML = `<div style="text-align: center; color: #94a3b8; padding: 20px;">Brak wyników dla: <strong>"${frazaSzukana}"</strong> 🕵️‍♂️</div>`;
+        return;
+    }
+
+    przefiltrowane.forEach(post => {
+        const dataFormat = new Date(post.data).toLocaleString('pl-PL', {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'});
+        const imgTag = post.awatar ? `<img src="${post.awatar}" style="width:100%; height:100%; object-fit:cover;">` : `👤`;
+        
+        const czyMojPost = (post.userId === currentUserUid);
+        const przyciskUsun = czyMojPost ? `<button onclick="usunPostZForum('${post.id}')" style="position: absolute; top: 10px; right: 10px; background: none; border: none; font-size: 16px; cursor: pointer; padding: 5px; color: #ef4444; opacity: 0.7; transition: 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.7'">🗑️</button>` : ``;
+
+        // MATEMATYKA POLUBIEŃ
+        const polubieniaCount = post.likes ? Object.keys(post.likes).length : 0;
+        const czyPolubilem = post.likes && post.likes[currentUserUid];
+        const serceIkonka = czyPolubilem ? '❤️' : '🤍';
+        const serceKolor = czyPolubilem ? '#ef4444' : '#94a3b8';
+        const tekstPolubienia = polubieniaCount > 0 ? polubieniaCount : 'Lubię to';
+
+        // --- KOLOROWANIE TAGÓW ---
+        const kategoriaPosta = post.kategoria || "💬 Ogólne";
+        let kolorTxt = "#475569"; let kolorTla = "#f1f5f9"; // Ogólne (Szary)
+        
+        if(kategoriaPosta.includes("Zdrowie")) { kolorTxt = "#dc2626"; kolorTla = "#fee2e2"; } // Czerwony
+        else if(kategoriaPosta.includes("Sen")) { kolorTxt = "#4f46e5"; kolorTla = "#e0e7ff"; } // Indygo
+        else if(kategoriaPosta.includes("Dieta")) { kolorTxt = "#16a34a"; kolorTla = "#dcfce7"; } // Zielony
+        else if(kategoriaPosta.includes("Rozwój")) { kolorTxt = "#d97706"; kolorTla = "#fef3c7"; } // Bursztynowy
+
+        const tagHTML = `<span style="background-color: ${kolorTla}; color: ${kolorTxt}; font-size: 9px; padding: 2px 6px; border-radius: 8px; font-weight: 800; letter-spacing: 0.5px; border: 1px solid ${kolorTxt}40; margin-left: 6px; vertical-align: middle;">${kategoriaPosta}</span>`;
+
+        let odpowiedziHTML = "";
+        if (post.odpowiedzi) {
+            Object.keys(post.odpowiedzi).forEach(replyKey => {
+                const odp = post.odpowiedzi[replyKey];
+                const odpDataFormat = new Date(odp.data).toLocaleString('pl-PL', {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'});
+                const odpImgTag = odp.awatar ? `<img src="${odp.awatar}" style="width:100%; height:100%; object-fit:cover;">` : `👤`;
+                const czyMojaOdp = (odp.userId === currentUserUid);
+                const btnUsunOdp = czyMojaOdp ? `<button onclick="usunOdpowiedzZForum('${post.id}', '${replyKey}')" style="position: absolute; top: 5px; right: 0; background: none; border: none; font-size: 13px; cursor: pointer; color: #ef4444; opacity: 0.6;">🗑️</button>` : '';
+
+                odpowiedziHTML += `
+                <div style="display: flex; gap: 10px; margin-top: 12px; margin-left: 45px; padding-top: 12px; border-top: 1px dashed #e2e8f0; position: relative;">
+                    ${btnUsunOdp}
+                    <div style="width: 28px; height: 28px; border-radius: 50%; background-color: #f1f5f9; overflow: hidden; display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0; border: 1px solid #cbd5e1;">
+                        ${odpImgTag}
+                    </div>
+                    <div style="flex-grow: 1; padding-right: 15px;"> 
+                        <div style="font-size: 11px; font-weight: bold; color: #64748b;">${odp.autor} <span style="font-weight: normal; font-size: 9px; margin-left: 5px;">• ${odpDataFormat}</span></div>
+                        <div style="font-size: 13px; margin-top: 3px; color: #334155; line-height: 1.4;">${odp.tresc}</div>
+                    </div>
+                </div>
+                `;
+            });
+        }
+
+        lista.innerHTML += `
+        <div class="card" style="margin: 0; padding: 15px; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); text-align: left; position: relative;">
+            ${przyciskUsun}
+            <div style="display: flex; gap: 12px;">
+                <div style="width: 42px; height: 42px; border-radius: 50%; background-color: #e2e8f0; overflow: hidden; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; border: 2px solid #e2e8f0;">
+                    ${imgTag}
+                </div>
+                <div style="padding-right: 20px; flex-grow: 1;"> 
+                    <div style="font-size: 13px; font-weight: bold; color: #3b82f6; display: flex; align-items: center;">
+                        ${post.autor} ${tagHTML} 
+                    </div>
+                    <div style="color: #94a3b8; font-size: 10px; margin-top: 2px;">Opublikowano: ${dataFormat}</div>
+                    <div style="font-size: 14px; margin-top: 8px; color: #334155; line-height: 1.45;">${post.tresc}</div>
+                    
+                    <div style="margin-top: 15px; display: flex; gap: 20px; align-items: center; border-top: 1px solid #f8fafc; padding-top: 10px;">
+                        <button onclick="toggleLikePost('${post.id}')" style="background: transparent; border: none; font-size: 13px; font-weight: 700; cursor: pointer; padding: 0; display: flex; align-items: center; gap: 5px; color: ${serceKolor}; transition: 0.2s;">
+                            <span style="font-size: 15px;">${serceIkonka}</span> ${tekstPolubienia}
+                        </button>
+                        <button onclick="pokazPoleOdpowiedzi('${post.id}')" style="background: transparent; border: none; color: #8b5cf6; font-size: 13px; font-weight: 700; cursor: pointer; padding: 0; display: flex; align-items: center; gap: 5px;">
+                            <span style="font-size: 15px;">💬</span> Odpowiedz
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            ${odpowiedziHTML}
+
+            <div id="reply-box-${post.id}" style="display: none; margin-top: 15px; margin-left: 45px;">
+                <div style="display: flex; gap: 8px;">
+                    <input type="text" id="reply-input-${post.id}" placeholder="Napisz odpowiedź..." style="flex-grow: 1; padding: 8px 12px; border-radius: 20px; border: 1px solid #cbd5e1; font-size: 12px; outline: none;">
+                    <button onclick="wyslijOdpowiedz('${post.id}')" class="btn" style="padding: 6px 12px; font-size: 12px; margin: 0; border-radius: 20px; background-color: #8b5cf6;">Wyślij</button>
+                </div>
+            </div>
+        </div>
+        `;
+    });
+}
+
+// 4. Narzędzia postów (Usuwanie, Odpowiadanie, POLUBIENIA)
+window.usunPostZForum = function(postId) {
+    if(confirm("Czy na pewno chcesz trwale usunąć ten post? Znikną również wszystkie odpowiedzi!")) {
+        database.ref('forum_posts/' + postId).remove().catch(e => alert(e.message));
+    }
+}
+
+window.pokazPoleOdpowiedzi = function(postId) {
+    const box = document.getElementById('reply-box-' + postId);
+    const input = document.getElementById('reply-input-' + postId);
+    if(box.style.display === 'none') {
+        box.style.display = 'block';
+        input.focus();
+    } else {
+        box.style.display = 'none';
+    }
+}
+
+window.wyslijOdpowiedz = function(postId) {
+    const input = document.getElementById('reply-input-' + postId);
+    const tresc = input.value.trim();
+    if(!tresc) return alert("Napisz treść odpowiedzi!");
+
+    const rola = document.getElementById('rolaRodzica').value || "Rodzic";
+    const imie = document.getElementById('imieDziecka').value || "Dziecka";
+    
+    const odpowiedz = {
+        userId: currentUserUid || "Anonim",
+        autor: `${rola} ${imie}`,
+        awatar: aktualnyAwatarBase64 || "",
+        tresc: tresc,
+        data: Date.now()
+    };
+
+    database.ref('forum_posts/' + postId + '/odpowiedzi').push(odpowiedz).catch(err => alert("Błąd: " + err.message));
+}
+
+window.usunOdpowiedzZForum = function(postId, replyId) {
+    if(confirm("Usunąć ten komentarz?")) {
+        database.ref('forum_posts/' + postId + '/odpowiedzi/' + replyId).remove().catch(e => alert(e.message));
+    }
+}
+
+// Przełączanie serduszka
+window.toggleLikePost = function(postId) {
+    if (!currentUserUid) return alert("Musisz być zalogowany, aby lajkować!");
+    
+    const likeRef = database.ref('forum_posts/' + postId + '/likes/' + currentUserUid);
+    likeRef.once('value').then(snapshot => {
+        if (snapshot.exists()) {
+            likeRef.remove(); 
+        } else {
+            likeRef.set(true); 
+        }
+    });
+}
+
+// ==========================================
+// WYSZUKIWARKA NA PULPICIE (FILTROWANIE KAFELKÓW)
+// ==========================================
+const searchTrigger = document.getElementById('dashboardSearchTrigger');
+const searchContainer = document.getElementById('dashboardSearchContainer');
+const searchInput = document.getElementById('inputWyszukiwarkaPulpit');
+const kafelkiPulpitu = document.querySelectorAll('.kafelek');
+const sekcjePulpitu = document.querySelectorAll('.grid-sekcja');
+
+if (searchTrigger && searchContainer && searchInput) {
+    
+    // 1. Pokaż wyszukiwarkę po kliknięciu w "MÓWI..."
+    searchTrigger.addEventListener('click', () => {
+        searchTrigger.style.display = 'none'; // Ukryj przycisk
+        searchContainer.style.display = 'block'; // Pokaż pasek
+        searchInput.focus(); // Ustaw kursor w polu
+    });
+
+    // 2. Filtrowanie kafelków na żywo podczas wpisywania
+    searchInput.addEventListener('input', (e) => {
+        const fraza = e.target.value.toLowerCase().trim();
+
+        if (fraza === "") {
+            // Jeśli pole jest puste - pokazujemy wszystko z powrotem
+            kafelkiPulpitu.forEach(k => k.style.display = '');
+            sekcjePulpitu.forEach(s => s.style.display = '');
+        } else {
+            // Ukrywamy tytuły sekcji, żeby wyniki wyszukiwania były czyste
+            sekcjePulpitu.forEach(s => s.style.display = 'none');
+            
+            // Filtrujemy same kafelki po ich nazwach
+            kafelkiPulpitu.forEach(kafelek => {
+                const tekstKafelka = kafelek.innerText.toLowerCase();
+                if (tekstKafelka.includes(fraza)) {
+                    kafelek.style.display = ''; // Pokaż, jeśli pasuje
+                } else {
+                    kafelek.style.display = 'none'; // Ukryj, jeśli nie pasuje
+                }
+            });
+        }
+    });
+
+    // 3. Ukryj wyszukiwarkę, jeśli klikniemy gdzieś obok (a pole jest puste)
+    document.addEventListener('click', (e) => {
+        if (searchContainer.style.display === 'block' && !searchContainer.contains(e.target) && e.target !== searchTrigger) {
+            if (searchInput.value.trim() === "") {
+                searchContainer.style.display = 'none'; // Chowamy pasek
+                searchTrigger.style.display = 'inline-block'; // Wracamy do przycisku
+                
+                // Przywracamy domyślny widok pulpitu
+                kafelkiPulpitu.forEach(k => k.style.display = '');
+                sekcjePulpitu.forEach(s => s.style.display = '');
+            }
+        }
+    });
+}
+
+}); // <--- GŁÓWNE ZAMKNIĘCIE CAŁEJ APLIKACJI
