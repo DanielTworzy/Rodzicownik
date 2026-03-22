@@ -473,7 +473,7 @@ if (btnZalogujGoogle) {
     btnNavStart.addEventListener("click", () => { pokazEkran(ekranStart, "Rodzicownik 📔💙"); czyscPasekNawigacji(); btnNavStart.classList.add("aktywny"); odswiezWidokPulpitu(); });
     btnNavKalendarz.addEventListener("click", () => { pokazEkran(wszystkieEkrany[6], "Kalendarz 📅"); czyscPasekNawigacji(); btnNavKalendarz.classList.add("aktywny"); renderujKalendarz(); });
     
-    // --- POPRAWIONY PRZYCISK FORUM Z BOGATYM TYTUŁEM ---
+    // --- POPRAWIONY PRZYCISK FORUM Z BOGATYM TYTUŁEM I POWIADOMIENIAMI ---
     navForum.addEventListener('click', () => {
         pokazEkran(ekranForum, `
             Wioska Rodziców 🌍
@@ -484,6 +484,11 @@ if (btnZalogujGoogle) {
         czyscPasekNawigacji();
         navForum.classList.add("aktywny");
         zaladujPostyForum(); 
+        
+        // --- GASZENIE KROPKI I ZAPIS CZASU WIZYTY ---
+        document.getElementById('badgeForum').style.display = 'none';
+        localStorage.setItem('ostatniaWizytaForum', Date.now());
+
         if (typeof zaktualizujMojaTozsamoscNaForum === "function") {
             zaktualizujMojaTozsamoscNaForum(); 
         }
@@ -2105,5 +2110,33 @@ if (searchTrigger && searchContainer && searchInput) {
         }
     });
 }
+
+// ==========================================
+// SYSTEM POWIADOMIEŃ FORUM (CZERWONA KROPKA)
+// ==========================================
+function inicjujPowiadomieniaForum() {
+    const badge = document.getElementById('badgeForum');
+    const ekranForum = document.getElementById('ekranForum'); 
+
+    // Pobieramy czas ostatniej wizyty z pamięci telefonu (lub 0, jeśli to pierwszy raz)
+    let ostatniaWizyta = localStorage.getItem('ostatniaWizytaForum') || 0;
+
+    // Nasłuchujemy TYLKO najnowszego posta, żeby nie spowalniać aplikacji
+    database.ref('forum_posts').orderByChild('data').limitToLast(1).on('value', (snapshot) => {
+        snapshot.forEach(child => {
+            const najnowszyPost = child.val();
+            
+            // Jeśli post jest nowszy niż nasza ostatnia wizyta ORAZ nie jesteśmy aktualnie na forum
+            if (najnowszyPost.data > ostatniaWizyta && ekranForum.classList.contains('ukryty')) {
+                badge.style.display = 'block'; // Zapal kropkę!
+            }
+        });
+    });
+}
+
+// Odpalamy nasłuchiwanie od razu po włączeniu aplikacji
+setTimeout(() => {
+    inicjujPowiadomieniaForum();
+}, 1000); // Małe opóźnienie, żeby dać Firebase czas na połączenie
 
 }); // <--- GŁÓWNE ZAMKNIĘCIE CAŁEJ APLIKACJI

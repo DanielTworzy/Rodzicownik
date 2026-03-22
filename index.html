@@ -720,7 +720,12 @@
         <nav id="pasekDolny" class="bottom-nav no-print ukryty">
     <button id="navStart" class="nav-btn aktywny"><div class="nav-icon">🏠</div><span>Pulpit</span></button>
     <button id="navKalendarz" class="nav-btn"><div class="nav-icon">📅</div><span>Kalendarz</span></button>
-    <button id="navForum" class="nav-btn"><div class="nav-icon">🌍</div><span>Społeczność</span></button>
+    <button id="navForum" class="nav-btn" style="position: relative;">
+        <div class="nav-icon">🌍</div>
+        <span>Społeczność</span>
+        <!-- CZERWONA KROPKA POWIADOMIEŃ -->
+        <div id="badgeForum" style="display: none; position: absolute; top: 6px; right: 22px; width: 10px; height: 10px; background-color: #ef4444; border-radius: 50%; border: 2px solid white; box-shadow: 0 2px 4px rgba(239,68,68,0.4);"></div>
+    </button>
     <button id="navProfil" class="nav-btn"><div class="nav-icon">👤</div><span>Profil</span></button>
 </nav>
     
